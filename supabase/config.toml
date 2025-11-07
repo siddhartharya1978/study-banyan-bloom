@@ -1,1 +1,10 @@
 project_id = "ehoadatznnfanskbcigj"
+
+[functions.generate-deck]
+verify_jwt = false
+
+[functions.ingest-url]
+verify_jwt = false
+
+[functions.ingest-pdf]
+verify_jwt = false

@@ -10,9 +10,89 @@ import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [url, setUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "PDF must be under 20MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handlePdfSubmit = async () => {
+    if (!selectedFile) return;
+
+    setIsProcessing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to upload PDFs",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
+
+      // Upload to storage
+      const filePath = `${session.user.id}/${Date.now()}-${selectedFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(filePath, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Create source
+      const { data: source, error: sourceError } = await supabase
+        .from("sources")
+        .insert({
+          user_id: session.user.id,
+          source_type: "pdf",
+          file_path: filePath,
+          status: "processing",
+        })
+        .select()
+        .single();
+
+      if (sourceError) throw sourceError;
+
+      // Call PDF processing function
+      const { error: functionError } = await supabase.functions.invoke("ingest-pdf", {
+        body: { sourceId: source.id },
+      });
+
+      if (functionError) throw functionError;
+
+      toast({
+        title: "PDF uploaded!",
+        description: "Your document is being processed",
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+      setSelectedFile(null);
+    }
+  };
 
   const handleUrlSubmit = async () => {
     if (!url) return;
@@ -31,7 +111,7 @@ const Index = () => {
         return;
       }
 
-      // Create source
+      // Create source - trigger will automatically call ingest-url
       const { data: source, error: sourceError } = await supabase
         .from("sources")
         .insert({
@@ -46,11 +126,11 @@ const Index = () => {
       if (sourceError) throw sourceError;
 
       toast({
-        title: "Processing started!",
-        description: "Your content is being converted into a study deck",
+        title: "Processing started! 🌱",
+        description: "Your deck will appear on the dashboard in ~90 seconds",
       });
 
-      // Navigate to dashboard where the deck will appear
+      setUrl("");
       navigate("/dashboard");
     } catch (error: any) {
       toast({
@@ -163,21 +243,41 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="pdf" className="space-y-4">
-              <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors cursor-pointer">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handlePdfUpload}
+                className="hidden"
+                id="pdf-upload"
+              />
+              <label
+                htmlFor="pdf-upload"
+                className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors cursor-pointer block"
+              >
                 <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-lg text-muted-foreground mb-2">
-                  Drop your PDF here or click to upload
+                  {selectedFile ? selectedFile.name : "Drop your PDF here or click to upload"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Max file size: 20MB
                 </p>
-              </div>
+              </label>
               <Button 
-                disabled={true}
-                className="w-full h-12 text-lg"
+                onClick={handlePdfSubmit}
+                disabled={isProcessing || !selectedFile}
+                className="w-full h-12 text-lg bg-gradient-primary hover:opacity-90 transition-opacity"
               >
-                <Upload className="mr-2 h-5 w-5" />
-                Upload & Generate
+                {isProcessing ? (
+                  <>
+                    <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+                    Processing PDF...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-5 w-5" />
+                    Upload & Generate
+                  </>
+                )}
               </Button>
             </TabsContent>
           </Tabs>

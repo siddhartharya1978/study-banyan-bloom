@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, LogOut, Plus, BookOpen } from "lucide-react";
+import TreeVisualization from "@/components/TreeVisualization";
 import type { Database } from "@/integrations/supabase/types";
 
 type Deck = Database["public"]["Tables"]["decks"]["Row"];
@@ -19,6 +20,27 @@ const Dashboard = () => {
 
   useEffect(() => {
     checkAuth();
+    
+    // Set up realtime subscription for new decks
+    const channel = supabase
+      .channel('deck-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'decks',
+        },
+        () => {
+          // Reload decks when changes occur
+          loadDashboard();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const checkAuth = async () => {
@@ -102,23 +124,29 @@ const Dashboard = () => {
 
         {/* Progress Card */}
         {progress && (
-          <Card className="p-6 mb-8 bg-gradient-primary shadow-glow">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <Card className="p-6 mb-8 shadow-medium">
+            <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <p className="text-3xl font-bold text-primary-foreground">{progress.xp}</p>
-                <p className="text-sm text-primary-foreground/80">XP</p>
+                <TreeVisualization level={progress.tree_level || 1} animated />
               </div>
-              <div>
-                <p className="text-3xl font-bold text-primary-foreground">{progress.level}</p>
-                <p className="text-sm text-primary-foreground/80">Level</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-primary-foreground">{progress.streak_days}</p>
-                <p className="text-sm text-primary-foreground/80">Day Streak</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-primary-foreground">{progress.tree_level}</p>
-                <p className="text-sm text-primary-foreground/80">Tree Level</p>
+              
+              <div className="grid grid-cols-2 gap-4 content-center">
+                <div className="text-center p-4 bg-gradient-primary rounded-lg text-primary-foreground">
+                  <p className="text-3xl font-bold">{progress.xp}</p>
+                  <p className="text-sm opacity-80">Total XP</p>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <p className="text-3xl font-bold text-foreground">{progress.level}</p>
+                  <p className="text-sm text-muted-foreground">Level</p>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <p className="text-3xl font-bold text-accent">{progress.streak_days} 🔥</p>
+                  <p className="text-sm text-muted-foreground">Day Streak</p>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <p className="text-3xl font-bold text-foreground">{progress.total_cards_reviewed}</p>
+                  <p className="text-sm text-muted-foreground">Cards Reviewed</p>
+                </div>
               </div>
             </div>
           </Card>

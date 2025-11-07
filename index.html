@@ -2,23 +2,42 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>study-banyan-bloom</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Banyan Tree" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#2E7D5A" />
+    
+    <title>Banyan Tree - Learn Smarter, Grow Stronger</title>
+    <meta name="description" content="Transform any URL, YouTube video, or PDF into AI-powered study decks. Master content with flashcards, MCQs, and spaced repetition." />
+    <meta name="keywords" content="study app, flashcards, spaced repetition, AI learning, education, study decks, MCQ, exam prep" />
+    <meta name="author" content="Banyan Tree" />
 
-    <meta property="og:title" content="study-banyan-bloom" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:title" content="Banyan Tree - Learn Smarter, Grow Stronger" />
+    <meta property="og:description" content="Transform any content into AI-powered study decks in 90 seconds. Flashcards, MCQs, and gamified learning." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:title" content="Banyan Tree - Smart Study Platform" />
+    <meta name="twitter:description" content="AI-powered flashcards and spaced repetition for faster learning" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register service worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registered'))
+            .catch(err => console.log('Service Worker registration failed:', err));
+        });
+      }
+    </script>
   </body>
 </html>
