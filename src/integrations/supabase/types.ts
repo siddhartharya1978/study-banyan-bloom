@@ -128,24 +128,45 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age_group: string | null
           created_at: string | null
+          daily_goal: number | null
+          difficulty_preference: string | null
           display_name: string | null
           id: string
+          interests: string[] | null
+          learning_goals: string[] | null
+          notification_enabled: boolean | null
           preferred_language: string | null
+          theme_preference: string | null
           updated_at: string | null
         }
         Insert: {
+          age_group?: string | null
           created_at?: string | null
+          daily_goal?: number | null
+          difficulty_preference?: string | null
           display_name?: string | null
           id: string
+          interests?: string[] | null
+          learning_goals?: string[] | null
+          notification_enabled?: boolean | null
           preferred_language?: string | null
+          theme_preference?: string | null
           updated_at?: string | null
         }
         Update: {
+          age_group?: string | null
           created_at?: string | null
+          daily_goal?: number | null
+          difficulty_preference?: string | null
           display_name?: string | null
           id?: string
+          interests?: string[] | null
+          learning_goals?: string[] | null
+          notification_enabled?: boolean | null
           preferred_language?: string | null
+          theme_preference?: string | null
           updated_at?: string | null
         }
         Relationships: []
