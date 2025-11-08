@@ -118,21 +118,13 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // Trigger deck generation
-    const generateResponse = await fetch(
-      `${supabaseUrl}/functions/v1/generate-deck`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${supabaseServiceKey}`,
-        },
-        body: JSON.stringify({ sourceId }),
-      }
-    );
+    // Trigger deck generation using Supabase client
+    const { error: generateError } = await supabase.functions.invoke("generate-deck", {
+      body: { sourceId },
+    });
 
-    if (!generateResponse.ok) {
-      console.error("Failed to trigger deck generation");
+    if (generateError) {
+      console.error("Failed to trigger deck generation:", generateError);
     }
 
     return new Response(

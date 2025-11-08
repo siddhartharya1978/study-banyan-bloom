@@ -1,19 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Link as LinkIcon, Youtube, Sparkles, Zap, Target } from "lucide-react";
+import { Upload, Link as LinkIcon, Youtube, Sparkles, Zap, Target, LogIn, UserPlus, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { User } from "@supabase/supabase-js";
 
 const Index = () => {
   const [url, setUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,7 +125,7 @@ const Index = () => {
         return;
       }
 
-      // Create source - trigger will automatically call ingest-url
+      // Create source
       const { data: source, error: sourceError } = await supabase
         .from("sources")
         .insert({
@@ -124,6 +138,13 @@ const Index = () => {
         .single();
 
       if (sourceError) throw sourceError;
+
+      // Manually call ingest-url edge function
+      const { error: functionError } = await supabase.functions.invoke("ingest-url", {
+        body: { sourceId: source.id },
+      });
+
+      if (functionError) throw functionError;
 
       toast({
         title: "Processing started! 🌱",
@@ -145,6 +166,41 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
+      {/* Header */}
+      <header className="container mx-auto px-4 py-4">
+        <div className="flex justify-end gap-2">
+          {user ? (
+            <Button 
+              onClick={() => navigate("/dashboard")}
+              variant="default"
+              className="gap-2"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </Button>
+          ) : (
+            <>
+              <Button 
+                onClick={() => navigate("/auth")}
+                variant="ghost"
+                className="gap-2"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Button>
+              <Button 
+                onClick={() => navigate("/auth")}
+                variant="default"
+                className="gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Sign Up
+              </Button>
+            </>
+          )}
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12 animate-grow">
