@@ -86,11 +86,15 @@ const Index = () => {
 
       if (sourceError) throw sourceError;
 
-      const { error: functionError } = await supabase.functions.invoke("ingest-pdf", {
+      const { data, error: functionError } = await supabase.functions.invoke("ingest-pdf", {
         body: { sourceId: source.id },
       });
 
-      if (functionError) throw functionError;
+      if (functionError) {
+        // Extract detailed error message if available
+        const errorMessage = data?.error || functionError.message || "Processing failed";
+        throw new Error(errorMessage);
+      }
 
       toast({
         title: "PDF uploaded!",
@@ -143,11 +147,15 @@ const Index = () => {
       if (sourceError) throw sourceError;
 
       const functionName = isYoutube ? "ingest-youtube" : "ingest-url";
-      const { error: functionError } = await supabase.functions.invoke(functionName, {
+      const { data, error: functionError } = await supabase.functions.invoke(functionName, {
         body: { sourceId: source.id },
       });
 
-      if (functionError) throw functionError;
+      if (functionError) {
+        // Extract detailed error message if available
+        const errorMessage = data?.error || functionError.message || "Processing failed";
+        throw new Error(errorMessage);
+      }
 
       toast({
         title: "Processing started! 🌱",
