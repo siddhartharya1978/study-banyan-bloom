@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.ingest-pdf]
 verify_jwt = false
+
+[functions.ingest-youtube]
+verify_jwt = false

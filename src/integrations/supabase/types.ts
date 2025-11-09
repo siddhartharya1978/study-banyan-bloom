@@ -76,6 +76,44 @@ export type Database = {
           },
         ]
       }
+      chunks: {
+        Row: {
+          citation: string | null
+          created_at: string | null
+          id: string
+          lang: string | null
+          ord: number
+          source_id: string
+          text: string
+        }
+        Insert: {
+          citation?: string | null
+          created_at?: string | null
+          id?: string
+          lang?: string | null
+          ord: number
+          source_id: string
+          text: string
+        }
+        Update: {
+          citation?: string | null
+          created_at?: string | null
+          id?: string
+          lang?: string | null
+          ord?: number
+          source_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chunks_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       decks: {
         Row: {
           card_count: number | null
@@ -177,6 +215,7 @@ export type Database = {
           created_at: string | null
           deck_id: string
           id: string
+          metadata: Json | null
           result: string
           session_id: string | null
           time_spent_seconds: number | null
@@ -187,6 +226,7 @@ export type Database = {
           created_at?: string | null
           deck_id: string
           id?: string
+          metadata?: Json | null
           result: string
           session_id?: string | null
           time_spent_seconds?: number | null
@@ -197,6 +237,7 @@ export type Database = {
           created_at?: string | null
           deck_id?: string
           id?: string
+          metadata?: Json | null
           result?: string
           session_id?: string | null
           time_spent_seconds?: number | null
@@ -223,6 +264,7 @@ export type Database = {
         Row: {
           content: string | null
           created_at: string | null
+          error: string | null
           file_path: string | null
           id: string
           language: string | null
@@ -237,6 +279,7 @@ export type Database = {
         Insert: {
           content?: string | null
           created_at?: string | null
+          error?: string | null
           file_path?: string | null
           id?: string
           language?: string | null
@@ -251,6 +294,7 @@ export type Database = {
         Update: {
           content?: string | null
           created_at?: string | null
+          error?: string | null
           file_path?: string | null
           id?: string
           language?: string | null

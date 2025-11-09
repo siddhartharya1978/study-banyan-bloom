@@ -11,6 +11,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const correlationId = crypto.randomUUID();
+  console.log(`[${correlationId}] Starting PDF ingestion`);
+
   try {
     const { sourceId } = await req.json();
 
@@ -19,8 +22,6 @@ serve(async (req) => {
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    console.log("Processing PDF for source:", sourceId);
 
     // Get source
     const { data: source, error: sourceError } = await supabase
@@ -35,6 +36,14 @@ serve(async (req) => {
       throw new Error("No file path found for source");
     }
 
+    console.log(`[${correlationId}] Processing PDF: ${source.file_path}`);
+
+    // Update status
+    await supabase
+      .from("sources")
+      .update({ status: "processing" })
+      .eq("id", sourceId);
+
     // Download PDF from storage
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("documents")
@@ -42,13 +51,20 @@ serve(async (req) => {
 
     if (downloadError) throw downloadError;
 
-    // Convert file to base64 for AI processing
+    // Check file size (limit to 10MB for performance)
     const arrayBuffer = await fileData.arrayBuffer();
+    if (arrayBuffer.byteLength > 10 * 1024 * 1024) {
+      throw new Error("PDF file too large (max 10MB)");
+    }
+
+    console.log(`[${correlationId}] PDF size: ${(arrayBuffer.byteLength / 1024).toFixed(2)}KB`);
+
+    // Convert file to base64 for AI processing
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
-    console.log("PDF downloaded, size:", arrayBuffer.byteLength);
-
     // Extract text using Gemini's vision capabilities
+    // Note: For production, consider using pdf.js for text-based PDFs first
+    // and only fall back to vision for scanned/image PDFs
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -63,7 +79,7 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Extract all text content from this PDF document. Preserve structure and formatting. Return the full text content."
+                text: "Extract all text content from this PDF document. Preserve headings, paragraphs, and structure. Return only the extracted text, nothing else. Limit to first 40 pages if longer."
               },
               {
                 type: "image_url",
@@ -78,65 +94,91 @@ serve(async (req) => {
     });
 
     if (aiResponse.status === 429) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      throw new Error("Rate limit exceeded. Please try again in a few minutes.");
     }
 
     if (aiResponse.status === 402) {
-      return new Response(
-        JSON.stringify({ error: "Payment required. Please add credits to your workspace." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      throw new Error("AI credits exhausted. Please add credits to your workspace.");
     }
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error("AI Gateway error:", aiResponse.status, errorText);
-      throw new Error("Failed to extract PDF text");
+      console.error(`[${correlationId}] AI error:`, aiResponse.status, errorText);
+      throw new Error(`PDF extraction failed: ${aiResponse.status}`);
     }
 
     const aiData = await aiResponse.json();
     const extractedText = aiData.choices[0].message.content;
 
-    console.log(`Extracted ${extractedText.length} characters from PDF`);
+    console.log(`[${correlationId}] Extracted ${extractedText.length} characters`);
+
+    if (extractedText.length < 100) {
+      throw new Error("Not enough content extracted from PDF (< 100 chars). File may be empty or corrupted.");
+    }
 
     // Get title from filename or first line
     const fileName = source.file_path.split("/").pop()?.replace(".pdf", "") || "Untitled";
-    const title = fileName.substring(0, 100);
+    let title = fileName.substring(0, 100);
+    
+    // Try to extract title from first line of content
+    const firstLine = extractedText.split("\n")[0]?.trim();
+    if (firstLine && firstLine.length > 5 && firstLine.length < 100) {
+      title = firstLine;
+    }
+
+    // Limit content to 50k chars (~12k tokens)
+    const content = extractedText.length > 50000 
+      ? extractedText.substring(0, 50000) + "\n\n[Content truncated to 50,000 characters]"
+      : extractedText;
 
     // Update source with content
     const { error: updateError } = await supabase
       .from("sources")
       .update({
         title: title,
-        content: extractedText,
+        content: content,
         status: "completed",
+        error: null,
       })
       .eq("id", sourceId);
 
     if (updateError) throw updateError;
 
-    // Trigger deck generation using Supabase client
+    // Trigger deck generation
     const { error: generateError } = await supabase.functions.invoke("generate-deck", {
       body: { sourceId },
     });
 
     if (generateError) {
-      console.error("Failed to trigger deck generation:", generateError);
+      console.error(`[${correlationId}] Failed to trigger deck generation:`, generateError);
     }
 
+    console.log(`[${correlationId}] PDF ingestion complete`);
+
     return new Response(
-      JSON.stringify({ success: true, sourceId }),
+      JSON.stringify({ success: true, sourceId, correlationId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error) {
-    console.error("Error ingesting PDF:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  } catch (error: any) {
+    console.error(`[${correlationId}] Error:`, error);
+    const errorMessage = error.message || "Unknown error";
+    
+    // Update source with error
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const { sourceId } = await req.json();
+      
+      await supabase
+        .from("sources")
+        .update({ status: "failed", error: errorMessage })
+        .eq("id", sourceId);
+    } catch {}
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: errorMessage, correlationId }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

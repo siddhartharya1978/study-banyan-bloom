@@ -4,15 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, LogOut, Plus, BookOpen } from "lucide-react";
+import { Sparkles, LogOut, Plus, BookOpen, X } from "lucide-react";
 import TreeVisualization from "@/components/TreeVisualization";
 import type { Database } from "@/integrations/supabase/types";
 
 type Deck = Database["public"]["Tables"]["decks"]["Row"];
 type UserProgress = Database["public"]["Tables"]["user_progress"]["Row"];
+type Source = Database["public"]["Tables"]["sources"]["Row"];
 
 const Dashboard = () => {
   const [decks, setDecks] = useState<Deck[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -68,6 +70,17 @@ const Dashboard = () => {
 
       if (decksError) throw decksError;
       setDecks(decksData || []);
+
+      // Load sources for status tracking
+      const { data: sourcesData, error: sourcesError } = await supabase
+        .from("sources")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (sourcesError) throw sourcesError;
+      setSources(sourcesData || []);
 
       // Load progress
       const { data: progressData, error: progressError } = await supabase
@@ -151,6 +164,41 @@ const Dashboard = () => {
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <p className="text-3xl font-bold text-foreground">{progress.total_cards_reviewed}</p>
                   <p className="text-sm text-muted-foreground">Cards Reviewed</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Processing Status */}
+        {sources.some(s => s.status === "processing") && (
+          <Card className="p-6 mb-6 border-primary/50 bg-primary/5 animate-spring-in">
+            <div className="flex items-center gap-4">
+              <Sparkles className="h-8 w-8 text-primary animate-spin" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">Processing Your Content</h3>
+                <p className="text-sm text-muted-foreground">
+                  {sources.filter(s => s.status === "processing").length} source(s) being processed...
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Failed Sources */}
+        {sources.some(s => s.status === "failed") && (
+          <Card className="p-6 mb-6 border-destructive/50 bg-destructive/5">
+            <div className="flex items-center gap-4">
+              <X className="h-8 w-8 text-destructive" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">Processing Failed</h3>
+                <div className="space-y-2 mt-2">
+                  {sources.filter(s => s.status === "failed").map(source => (
+                    <div key={source.id} className="text-sm">
+                      <p className="font-medium">{source.title || "Untitled"}</p>
+                      <p className="text-destructive text-xs">{source.error}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

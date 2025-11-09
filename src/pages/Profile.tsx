@@ -68,6 +68,7 @@ const Profile = () => {
           age_group: profile.age_group,
           difficulty_preference: profile.difficulty_preference,
           daily_goal: profile.daily_goal,
+          preferred_language: profile.preferred_language,
         })
         .eq("id", session.user.id);
 
@@ -177,6 +178,25 @@ const Profile = () => {
               />
               <p className="text-xs text-muted-foreground">
                 How many cards do you want to review each day?
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="language">Preferred Language</Label>
+              <Select
+                value={profile.preferred_language || "en"}
+                onValueChange={(value) => setProfile({ ...profile, preferred_language: value as any })}
+              >
+                <SelectTrigger id="language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="hi">हिंदी (Hindi)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Language for study cards and interface
               </p>
             </div>
 

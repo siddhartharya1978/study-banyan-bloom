@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Sparkles, Check, X, SkipForward } from "lucide-react";
+import { ArrowLeft, Sparkles, Check, X, SkipForward, Clock } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type Card = Database["public"]["Tables"]["cards"]["Row"];
+type CardType = Database["public"]["Tables"]["cards"]["Row"];
 type Review = Database["public"]["Tables"]["reviews"]["Insert"];
 
 const Study = () => {
@@ -16,7 +16,7 @@ const Study = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [cards, setCards] = useState<Card[]>([]);
+  const [cards, setCards] = useState<CardType[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -24,10 +24,30 @@ const Study = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [sessionStats, setSessionStats] = useState({ correct: 0, incorrect: 0, skipped: 0 });
+  const [timeRemaining, setTimeRemaining] = useState(90); // 90 seconds for mini-review
+  const [timerActive, setTimerActive] = useState(false);
 
   useEffect(() => {
     loadCards();
   }, [deckId]);
+
+  // 90-second timer for mini-review
+  useEffect(() => {
+    if (!timerActive || sessionComplete) return;
+
+    const interval = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Time's up - end session
+          handleTimeUp();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerActive, sessionComplete]);
 
   const loadCards = async () => {
     try {
@@ -37,7 +57,7 @@ const Study = () => {
         return;
       }
 
-      // Load cards for this deck (limit to 10 for mini-review)
+      // Load cards for mini-review (exactly 8-10 cards)
       const { data, error } = await supabase
         .from("cards")
         .select("*")
@@ -56,8 +76,11 @@ const Study = () => {
         return;
       }
 
-      setCards(data);
+      // Lock to 8-10 cards for mini-review
+      const miniReviewCards = data.slice(0, Math.min(10, Math.max(8, data.length)));
+      setCards(miniReviewCards);
       setStartTime(Date.now());
+      setTimerActive(true); // Start timer
     } catch (error: any) {
       toast({
         title: "Error loading cards",
@@ -70,29 +93,54 @@ const Study = () => {
     }
   };
 
-  const calculateNextReview = (card: Card, result: "correct" | "incorrect") => {
+  // SM-2 Spaced Repetition Algorithm
+  const calculateNextReview = (card: CardType, quality: 0 | 1 | 2 | 3 | 4 | 5) => {
+    // quality: 0=complete blackout, 1=incorrect/hard recall, 2=incorrect/easy recall, 
+    //          3=correct/hard recall, 4=correct/good recall, 5=correct/perfect recall
     const now = new Date();
-    let newEasiness = card.easiness_factor || 2.5;
-    let newInterval = card.interval_days || 1;
+    let easiness = card.easiness_factor || 2.5;
+    let interval = card.interval_days || 1;
+    let repetitions = card.review_count || 0;
 
-    if (result === "correct") {
-      newEasiness = Math.max(1.3, newEasiness + 0.1);
-      newInterval = Math.ceil(newInterval * newEasiness);
+    // SM-2 formula
+    easiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+    easiness = Math.max(1.3, easiness); // Minimum easiness factor
+
+    if (quality < 3) {
+      // Incorrect answer - reset interval
+      interval = 1;
+      repetitions = 0;
     } else {
-      newEasiness = Math.max(1.3, newEasiness - 0.2);
-      newInterval = 1;
+      // Correct answer - increase interval
+      repetitions += 1;
+      if (repetitions === 1) {
+        interval = 1;
+      } else if (repetitions === 2) {
+        interval = 6;
+      } else {
+        interval = Math.round(interval * easiness);
+      }
     }
 
     const nextReview = new Date(now);
-    nextReview.setDate(nextReview.getDate() + newInterval);
+    nextReview.setDate(nextReview.getDate() + interval);
 
     return {
-      easiness_factor: newEasiness,
-      interval_days: newInterval,
+      easiness_factor: easiness,
+      interval_days: interval,
       next_review_at: nextReview.toISOString(),
       last_reviewed_at: now.toISOString(),
-      review_count: (card.review_count || 0) + 1,
+      review_count: repetitions,
     };
+  };
+
+  const handleTimeUp = async () => {
+    setTimerActive(false);
+    // Auto-mark remaining cards as skipped
+    const remaining = cards.length - currentIndex;
+    setSessionStats(prev => ({ ...prev, skipped: prev.skipped + remaining }));
+    await updateUserProgress();
+    setSessionComplete(true);
   };
 
   const handleReview = async (result: "correct" | "incorrect" | "skip") => {
@@ -100,14 +148,20 @@ const Study = () => {
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
 
     try {
+      const userId = (await supabase.auth.getSession()).data.session!.user.id;
+
       // Record review
       const review: Review = {
-        user_id: (await supabase.auth.getSession()).data.session!.user.id,
+        user_id: userId,
         card_id: currentCard.id,
         deck_id: deckId!,
         result,
         session_id: sessionId,
         time_spent_seconds: timeSpent,
+        metadata: { 
+          timer_remaining: timeRemaining,
+          card_number: currentIndex + 1 
+        }
       };
 
       const { error: reviewError } = await supabase
@@ -116,9 +170,11 @@ const Study = () => {
 
       if (reviewError) throw reviewError;
 
-      // Update card with spaced repetition algorithm
+      // Update card with SM-2 algorithm
       if (result !== "skip") {
-        const updates = calculateNextReview(currentCard, result);
+        // Map result to SM-2 quality (0-5)
+        const quality = result === "correct" ? 4 : 1; // 4 = good recall, 1 = hard incorrect
+        const updates = calculateNextReview(currentCard, quality);
         
         const { error: updateError } = await supabase
           .from("cards")
@@ -141,6 +197,7 @@ const Study = () => {
         setStartTime(Date.now());
       } else {
         // Session complete
+        setTimerActive(false);
         await updateUserProgress();
         setSessionComplete(true);
       }
@@ -158,6 +215,7 @@ const Study = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // XP: 10 per correct, 2 per incorrect, 0 per skip (effort-based)
       const xpGained = sessionStats.correct * 10 + sessionStats.incorrect * 2;
 
       const { data: progress, error: fetchError } = await supabase
@@ -170,15 +228,24 @@ const Study = () => {
 
       const today = new Date().toISOString().split("T")[0];
       const lastStudy = progress.last_study_date;
-      const isConsecutiveDay = lastStudy && 
-        new Date(lastStudy).getTime() === new Date(today).getTime() - 86400000;
+      
+      // Check if consecutive day (yesterday)
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      const isConsecutiveDay = lastStudy === yesterdayStr;
 
-      const newStreak = !lastStudy || isConsecutiveDay 
-        ? (progress.streak_days || 0) + 1 
-        : 1;
+      const newStreak = !lastStudy 
+        ? 1 
+        : lastStudy === today 
+          ? progress.streak_days || 1 // Same day - maintain streak
+          : isConsecutiveDay 
+            ? (progress.streak_days || 0) + 1 
+            : 1; // Streak broken
 
       const newXp = (progress.xp || 0) + xpGained;
       const newLevel = Math.floor(newXp / 100) + 1;
+      const newTreeLevel = Math.floor(newXp / 50) + 1; // Tree grows every 50 XP
 
       const { error: updateError } = await supabase
         .from("user_progress")
@@ -187,8 +254,8 @@ const Study = () => {
           level: newLevel,
           streak_days: newStreak,
           last_study_date: today,
-          total_cards_reviewed: (progress.total_cards_reviewed || 0) + cards.length,
-          tree_level: Math.floor(newXp / 50) + 1,
+          total_cards_reviewed: (progress.total_cards_reviewed || 0) + (sessionStats.correct + sessionStats.incorrect),
+          tree_level: newTreeLevel,
         })
         .eq("id", session.user.id);
 
@@ -207,7 +274,7 @@ const Study = () => {
   }
 
   if (sessionComplete) {
-    const totalCards = cards.length;
+    const totalCards = sessionStats.correct + sessionStats.incorrect;
     const accuracy = totalCards > 0 
       ? Math.round((sessionStats.correct / totalCards) * 100) 
       : 0;
@@ -229,7 +296,7 @@ const Study = () => {
             Shabash! 🎉
           </h2>
           <p className="text-xl text-muted-foreground mb-8">
-            You completed the mini-review!
+            Mini-review complete!
           </p>
 
           <div className="grid grid-cols-3 gap-4 mb-8">
@@ -284,8 +351,16 @@ const Study = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <div className="text-sm text-muted-foreground">
-            Card {currentIndex + 1} of {cards.length}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              <Clock className="h-5 w-5" />
+              <span className={timeRemaining <= 30 ? "text-destructive animate-pulse" : ""}>
+                {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
+              </span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {currentIndex + 1} / {cards.length}
+            </div>
           </div>
         </div>
 
@@ -295,7 +370,7 @@ const Study = () => {
         {/* Card */}
         <Card 
           className="p-8 mb-6 min-h-[300px] flex items-center justify-center cursor-pointer transition-all hover:shadow-medium"
-          onClick={() => setShowAnswer(!showAnswer)}
+          onClick={() => !showAnswer && setShowAnswer(true)}
         >
           <div className="text-center w-full">
             {currentCard.card_type === "mcq" && !showAnswer ? (
@@ -305,13 +380,13 @@ const Study = () => {
                   <Button
                     key={idx}
                     variant="outline"
-                    className="w-full text-left justify-start h-auto py-4 px-6"
+                    className="w-full text-left justify-start h-auto py-4 px-6 hover:bg-accent hover:text-accent-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowAnswer(true);
                     }}
                   >
-                    <span className="font-semibold mr-3">{String.fromCharCode(65 + idx)}.</span>
+                    <span className="font-semibold mr-3 text-primary">{String.fromCharCode(65 + idx)}.</span>
                     {option}
                   </Button>
                 ))}
@@ -319,20 +394,20 @@ const Study = () => {
             ) : (
               <div className="space-y-6">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Question</p>
+                  <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wide">Question</p>
                   <h3 className="text-2xl font-semibold">{currentCard.question}</h3>
                 </div>
                 
                 {showAnswer && (
                   <div className="animate-spring-in">
                     <div className="border-t pt-6">
-                      <p className="text-sm text-muted-foreground mb-2">Answer</p>
+                      <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wide">Answer</p>
                       <p className="text-xl text-primary font-medium">{currentCard.answer}</p>
                     </div>
                     
                     {currentCard.citation && (
                       <p className="text-xs text-muted-foreground mt-4 italic">
-                        Source: {currentCard.citation}
+                        📚 {currentCard.citation}
                       </p>
                     )}
                   </div>
@@ -341,8 +416,8 @@ const Study = () => {
             )}
 
             {!showAnswer && currentCard.card_type === "flashcard" && (
-              <p className="text-sm text-muted-foreground mt-4">
-                Tap to reveal answer
+              <p className="text-sm text-muted-foreground mt-4 animate-pulse">
+                👆 Tap to reveal answer
               </p>
             )}
           </div>
@@ -355,7 +430,7 @@ const Study = () => {
               variant="outline"
               size="lg"
               onClick={() => handleReview("incorrect")}
-              className="h-16"
+              className="h-16 hover:bg-destructive hover:text-destructive-foreground"
             >
               <X className="mr-2 h-5 w-5" />
               Incorrect
