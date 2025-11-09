@@ -153,7 +153,28 @@ const Index = () => {
 
       // Handle both user errors (400) and system errors (500+)
       if (functionError) {
-        const errorMessage = data?.error || functionError.message || "Processing failed";
+        // Try to extract the error message from various possible locations
+        let errorMessage = "Processing failed";
+        
+        try {
+          // Parse the error context if it exists
+          if (functionError.context && typeof functionError.context === 'object') {
+            errorMessage = functionError.context.error || errorMessage;
+          } else if (data?.error) {
+            errorMessage = data.error;
+          } else if (functionError.message) {
+            // Try to parse JSON from error message
+            try {
+              const parsed = JSON.parse(functionError.message);
+              errorMessage = parsed.error || errorMessage;
+            } catch {
+              errorMessage = functionError.message;
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing function error:", e);
+        }
+        
         throw new Error(errorMessage);
       }
 
@@ -165,9 +186,10 @@ const Index = () => {
       setUrl("");
       navigate("/dashboard");
     } catch (error: any) {
+      console.error("URL submission error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to process URL",
         variant: "destructive",
       });
     } finally {
