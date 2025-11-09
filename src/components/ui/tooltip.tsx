@@ -3,7 +3,17 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 import { cn } from "@/lib/utils";
 
-const TooltipProvider = TooltipPrimitive.Provider;
+// Wrap TooltipProvider to ensure React context is available
+const TooltipProvider = React.memo(
+  ({ children, ...props }: React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>) => {
+    return (
+      <TooltipPrimitive.Provider {...props}>
+        {children}
+      </TooltipPrimitive.Provider>
+    );
+  }
+);
+TooltipProvider.displayName = "TooltipProvider";
 
 const Tooltip = TooltipPrimitive.Root;
 
