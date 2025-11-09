@@ -17,5 +17,6 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: ['@radix-ui/react-tooltip'],
+    force: true,
   },
 }));
