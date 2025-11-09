@@ -127,11 +127,13 @@ const Index = () => {
         return;
       }
 
+      const isYoutube = url.includes("youtube.com") || url.includes("youtu.be");
+      
       const { data: source, error: sourceError } = await supabase
         .from("sources")
         .insert({
           user_id: session.user.id,
-          source_type: url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "url",
+          source_type: isYoutube ? "youtube" : "url",
           source_url: url,
           status: "processing",
         })
@@ -140,7 +142,8 @@ const Index = () => {
 
       if (sourceError) throw sourceError;
 
-      const { error: functionError } = await supabase.functions.invoke("ingest-url", {
+      const functionName = isYoutube ? "ingest-youtube" : "ingest-url";
+      const { error: functionError } = await supabase.functions.invoke(functionName, {
         body: { sourceId: source.id },
       });
 
