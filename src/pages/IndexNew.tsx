@@ -170,41 +170,44 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
       {/* Header */}
-      <header className="container mx-auto px-4 py-4 sticky top-0 bg-background/80 backdrop-blur-lg z-50 border-b border-border/50">
+      <header className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 sticky top-0 bg-background/80 backdrop-blur-lg z-50 border-b border-border/50">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3 animate-slide-up">
-            <img src={banyanLogo} alt="Banyan Tree" className="h-10 w-10" />
-            <span className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+          <div className="flex items-center gap-2 sm:gap-3 animate-slide-up">
+            <img src={banyanLogo} alt="Banyan Tree" className="h-8 w-8 sm:h-10 sm:w-10" />
+            <span className="text-lg sm:text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
               Banyan Tree
             </span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2">
             {user ? (
               <Button 
                 onClick={() => navigate("/dashboard")}
                 variant="default"
-                className="gap-2 bg-gradient-primary hover:opacity-90 transition-opacity"
+                size="sm"
+                className="gap-1.5 sm:gap-2 bg-gradient-primary hover:opacity-90 transition-opacity text-xs sm:text-sm"
               >
-                <LayoutDashboard className="h-4 w-4" />
-                Dashboard
+                <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Dashboard</span>
               </Button>
             ) : (
               <>
                 <Button 
                   onClick={() => navigate("/auth")}
                   variant="ghost"
-                  className="gap-2 hover:bg-muted"
+                  size="sm"
+                  className="gap-1.5 hover:bg-muted text-xs sm:text-sm"
                 >
-                  <LogIn className="h-4 w-4" />
-                  Sign In
+                  <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden xs:inline">Sign In</span>
                 </Button>
                 <Button 
                   onClick={() => navigate("/auth")}
                   variant="default"
-                  className="gap-2 bg-gradient-primary hover:opacity-90 transition-opacity"
+                  size="sm"
+                  className="gap-1.5 sm:gap-2 bg-gradient-primary hover:opacity-90 transition-opacity text-xs sm:text-sm"
                 >
-                  <UserPlus className="h-4 w-4" />
-                  Sign Up
+                  <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden xs:inline">Sign Up</span>
                 </Button>
               </>
             )}
@@ -214,7 +217,7 @@ const Index = () => {
 
       {/* Hero Section with Background */}
       <section 
-        className="relative container mx-auto px-4 py-20 overflow-hidden"
+        className="relative container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 overflow-hidden"
         style={{
           backgroundImage: `url(${heroBg})`,
           backgroundSize: 'cover',
@@ -223,71 +226,71 @@ const Index = () => {
       >
         <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background/90" />
         
-        <div className="relative z-10 text-center mb-12 animate-bounce-in">
-          <div className="mb-6 flex justify-center">
+        <div className="relative z-10 text-center mb-8 sm:mb-12 animate-bounce-in">
+          <div className="mb-4 sm:mb-6 flex justify-center">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse-glow" />
               <img 
                 src={banyanLogo} 
                 alt="Banyan Tree"
-                className="relative h-24 w-24 animate-float drop-shadow-2xl"
+                className="relative h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 animate-float drop-shadow-2xl"
               />
             </div>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight px-4">
             Studying Doesn't Have to Suck
           </h1>
           
-          <p className="text-xl md:text-3xl text-foreground mb-4 font-semibold">
+          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-foreground mb-3 sm:mb-4 font-semibold px-4">
             Transform Any Content into Study Decks
           </p>
           
-          <p className="text-lg md:text-xl text-muted-foreground font-medium">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-medium px-4">
             AI flashcards & MCQs in 90 seconds. Learn smarter, grow stronger 🌱
           </p>
         </div>
 
         {/* Input Section */}
-        <Card className="max-w-3xl mx-auto p-8 shadow-glow backdrop-blur-sm bg-card/95 border-2 border-primary/20 animate-slide-up">
+        <Card className="max-w-3xl mx-auto p-4 sm:p-6 md:p-8 shadow-glow backdrop-blur-sm bg-card/95 border-2 border-primary/20 animate-slide-up">
           <Tabs defaultValue="url" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted/50">
-              <TabsTrigger value="url" className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground">
-                <LinkIcon className="h-4 w-4" />
-                URL
+            <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 bg-muted/50 h-auto">
+              <TabsTrigger value="url" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground">
+                <LinkIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">URL</span>
               </TabsTrigger>
-              <TabsTrigger value="youtube" className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground">
-                <Youtube className="h-4 w-4" />
-                YouTube
+              <TabsTrigger value="youtube" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground">
+                <Youtube className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">YouTube</span>
               </TabsTrigger>
-              <TabsTrigger value="pdf" className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground">
-                <Upload className="h-4 w-4" />
-                PDF
+              <TabsTrigger value="pdf" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground">
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">PDF</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="url" className="space-y-4">
+            <TabsContent value="url" className="space-y-3 sm:space-y-4">
               <Input
                 type="url"
                 placeholder="Paste any URL here..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="text-lg h-14 border-2 focus:border-primary"
+                className="text-base sm:text-lg h-12 sm:h-14 border-2 focus:border-primary"
               />
               <Button 
                 onClick={handleUrlSubmit}
                 disabled={isProcessing || !url}
-                className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-opacity shadow-glow"
+                className="w-full h-12 sm:h-14 text-base sm:text-lg bg-gradient-primary hover:opacity-90 transition-opacity shadow-glow"
               >
                 {isProcessing ? (
                   <>
-                    <Sparkles className="mr-2 h-5 w-5 animate-spin" />
-                    Creating your deck...
+                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                    <span className="text-sm sm:text-base">Creating your deck...</span>
                   </>
                 ) : (
                   <>
-                    <Zap className="mr-2 h-5 w-5" />
-                    Generate Study Deck
+                    <Zap className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="text-sm sm:text-base">Generate Study Deck</span>
                   </>
                 )}
               </Button>
@@ -363,37 +366,37 @@ const Index = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 bg-gradient-to-r from-primary via-accent to-secondary">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto text-center">
+      <section className="py-8 sm:py-12 bg-gradient-to-r from-primary via-accent to-secondary">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-4xl mx-auto text-center">
             <div className="animate-bounce-in">
-              <div className="text-5xl font-bold text-primary-foreground mb-2">50K+</div>
-              <div className="text-primary-foreground/90 font-medium">Active Learners</div>
+              <div className="text-2xl sm:text-3xl md:text-5xl font-bold text-primary-foreground mb-1 sm:mb-2">50K+</div>
+              <div className="text-xs sm:text-sm md:text-base text-primary-foreground/90 font-medium">Active Learners</div>
             </div>
             <div className="animate-bounce-in" style={{ animationDelay: "100ms" }}>
-              <div className="text-5xl font-bold text-primary-foreground mb-2">1M+</div>
-              <div className="text-primary-foreground/90 font-medium">Cards Reviewed</div>
+              <div className="text-2xl sm:text-3xl md:text-5xl font-bold text-primary-foreground mb-1 sm:mb-2">1M+</div>
+              <div className="text-xs sm:text-sm md:text-base text-primary-foreground/90 font-medium">Cards Reviewed</div>
             </div>
             <div className="animate-bounce-in" style={{ animationDelay: "200ms" }}>
-              <div className="text-5xl font-bold text-primary-foreground mb-2">90s</div>
-              <div className="text-primary-foreground/90 font-medium">Avg. Deck Creation</div>
+              <div className="text-2xl sm:text-3xl md:text-5xl font-bold text-primary-foreground mb-1 sm:mb-2">90s</div>
+              <div className="text-xs sm:text-sm md:text-base text-primary-foreground/90 font-medium">Avg. Creation</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features */}
-      <section className="py-20 container mx-auto px-4">
-        <div className="text-center mb-16 animate-slide-up">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent">
+      <section className="py-12 sm:py-16 md:py-20 container mx-auto px-3 sm:px-4">
+        <div className="text-center mb-10 sm:mb-12 md:mb-16 animate-slide-up">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-hero bg-clip-text text-transparent px-4">
             Why Students Love Banyan Tree
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             The smartest way to learn, backed by science and loved by learners worldwide
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-6xl mx-auto">
           <Card className="p-8 text-center hover:shadow-glow hover:-translate-y-2 transition-all duration-300 animate-spring-in border-2 border-border/50">
             <div className="bg-gradient-primary rounded-2xl w-20 h-20 flex items-center justify-center mx-auto mb-6 shadow-glow">
               <Zap className="h-10 w-10 text-primary-foreground" />

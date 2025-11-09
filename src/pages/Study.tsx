@@ -282,55 +282,55 @@ const Study = () => {
     const xpEarned = sessionStats.correct * 10 + sessionStats.incorrect * 2;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full p-8 text-center animate-spring-in">
-          <div className="mb-6 flex justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-3 sm:p-4">
+        <Card className="max-w-lg w-full p-6 sm:p-8 text-center animate-spring-in">
+          <div className="mb-4 sm:mb-6 flex justify-center">
             <div className="relative">
               <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full animate-pulse-glow" />
-              <div className="relative bg-gradient-warm p-6 rounded-2xl shadow-glow">
-                <Sparkles className="h-16 w-16 text-accent-foreground animate-float" />
+              <div className="relative bg-gradient-warm p-4 sm:p-6 rounded-2xl shadow-glow">
+                <Sparkles className="h-12 w-12 sm:h-16 sm:w-16 text-accent-foreground animate-float" />
               </div>
             </div>
           </div>
 
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
             Shabash! 🎉
           </h2>
-          <p className="text-xl text-muted-foreground mb-8">
+          <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8">
             Mini-review complete!
           </p>
 
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-3xl font-bold text-primary">{sessionStats.correct}</p>
-              <p className="text-sm text-muted-foreground">Correct</p>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className="p-3 sm:p-4 bg-muted rounded-lg">
+              <p className="text-2xl sm:text-3xl font-bold text-primary">{sessionStats.correct}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Correct</p>
             </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-3xl font-bold text-destructive">{sessionStats.incorrect}</p>
-              <p className="text-sm text-muted-foreground">Incorrect</p>
+            <div className="p-3 sm:p-4 bg-muted rounded-lg">
+              <p className="text-2xl sm:text-3xl font-bold text-destructive">{sessionStats.incorrect}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Incorrect</p>
             </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-3xl font-bold text-accent">{accuracy}%</p>
-              <p className="text-sm text-muted-foreground">Accuracy</p>
+            <div className="p-3 sm:p-4 bg-muted rounded-lg">
+              <p className="text-2xl sm:text-3xl font-bold text-accent">{accuracy}%</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Accuracy</p>
             </div>
           </div>
 
-          <div className="bg-gradient-primary p-6 rounded-xl mb-6 shadow-glow">
-            <p className="text-4xl font-bold text-primary-foreground mb-2">+{xpEarned} XP</p>
-            <p className="text-sm text-primary-foreground/80">Your tree is growing! 🌱</p>
+          <div className="bg-gradient-primary p-4 sm:p-6 rounded-xl mb-4 sm:mb-6 shadow-glow">
+            <p className="text-3xl sm:text-4xl font-bold text-primary-foreground mb-2">+{xpEarned} XP</p>
+            <p className="text-xs sm:text-sm text-primary-foreground/80">Your tree is growing! 🌱</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <Button 
               onClick={() => window.location.reload()}
-              className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
+              className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-11 sm:h-12"
             >
               Review Again
             </Button>
             <Button 
               variant="outline"
               onClick={() => navigate("/dashboard")}
-              className="w-full"
+              className="w-full h-11 sm:h-12"
             >
               Back to Dashboard
             </Button>
@@ -344,70 +344,70 @@ const Study = () => {
   const progress = ((currentIndex + 1) / cards.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-4">
-      <div className="container mx-auto max-w-3xl py-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-3 sm:p-4">
+      <div className="container mx-auto max-w-3xl py-4 sm:py-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-xs sm:text-sm">
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Back</span>
           </Button>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              <Clock className="h-5 w-5" />
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg font-semibold">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className={timeRemaining <= 30 ? "text-destructive animate-pulse" : ""}>
                 {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
               </span>
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground">
               {currentIndex + 1} / {cards.length}
             </div>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <Progress value={progress} className="mb-8 h-2" />
+        <Progress value={progress} className="mb-4 sm:mb-8 h-1.5 sm:h-2" />
 
         {/* Card */}
         <Card 
-          className="p-8 mb-6 min-h-[300px] flex items-center justify-center cursor-pointer transition-all hover:shadow-medium"
+          className="p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 min-h-[250px] sm:min-h-[300px] flex items-center justify-center cursor-pointer transition-all hover:shadow-medium active:scale-[0.99]"
           onClick={() => !showAnswer && setShowAnswer(true)}
         >
           <div className="text-center w-full">
             {currentCard.card_type === "mcq" && !showAnswer ? (
-              <div className="space-y-4">
-                <h3 className="text-2xl font-semibold mb-6">{currentCard.question}</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-semibold mb-4 sm:mb-6 px-2">{currentCard.question}</h3>
                 {currentCard.options && JSON.parse(currentCard.options as string).map((option: string, idx: number) => (
                   <Button
                     key={idx}
                     variant="outline"
-                    className="w-full text-left justify-start h-auto py-4 px-6 hover:bg-accent hover:text-accent-foreground"
+                    className="w-full text-left justify-start h-auto py-3 sm:py-4 px-4 sm:px-6 hover:bg-accent hover:text-accent-foreground text-sm sm:text-base active:scale-[0.98] transition-transform"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowAnswer(true);
                     }}
                   >
-                    <span className="font-semibold mr-3 text-primary">{String.fromCharCode(65 + idx)}.</span>
-                    {option}
+                    <span className="font-semibold mr-2 sm:mr-3 text-primary min-w-[20px] sm:min-w-[24px]">{String.fromCharCode(65 + idx)}.</span>
+                    <span className="flex-1">{option}</span>
                   </Button>
                 ))}
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wide">Question</p>
-                  <h3 className="text-2xl font-semibold">{currentCard.question}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 uppercase tracking-wide">Question</p>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-semibold px-2">{currentCard.question}</h3>
                 </div>
                 
                 {showAnswer && (
                   <div className="animate-spring-in">
-                    <div className="border-t pt-6">
-                      <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wide">Answer</p>
-                      <p className="text-xl text-primary font-medium">{currentCard.answer}</p>
+                    <div className="border-t pt-4 sm:pt-6">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-2 uppercase tracking-wide">Answer</p>
+                      <p className="text-base sm:text-lg md:text-xl text-primary font-medium px-2">{currentCard.answer}</p>
                     </div>
                     
                     {currentCard.citation && (
-                      <p className="text-xs text-muted-foreground mt-4 italic">
+                      <p className="text-xs text-muted-foreground mt-3 sm:mt-4 italic px-2">
                         📚 {currentCard.citation}
                       </p>
                     )}
@@ -417,7 +417,7 @@ const Study = () => {
             )}
 
             {!showAnswer && currentCard.card_type === "flashcard" && (
-              <p className="text-sm text-muted-foreground mt-4 animate-pulse">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-4 animate-pulse">
                 👆 Tap to reveal answer
               </p>
             )}
@@ -426,32 +426,32 @@ const Study = () => {
 
         {/* Action Buttons */}
         {showAnswer && (
-          <div className="grid grid-cols-3 gap-4 animate-spring-in">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 animate-spring-in">
             <Button
               variant="outline"
               size="lg"
               onClick={() => handleReview("incorrect")}
-              className="h-16 hover:bg-destructive hover:text-destructive-foreground"
+              className="h-12 sm:h-14 md:h-16 hover:bg-destructive hover:text-destructive-foreground flex-col sm:flex-row gap-1 sm:gap-2 active:scale-95 transition-transform"
             >
-              <X className="mr-2 h-5 w-5" />
-              Incorrect
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm md:text-base">Incorrect</span>
             </Button>
             <Button
               variant="outline"
               size="lg"
               onClick={() => handleReview("skip")}
-              className="h-16"
+              className="h-12 sm:h-14 md:h-16 flex-col sm:flex-row gap-1 sm:gap-2 active:scale-95 transition-transform"
             >
-              <SkipForward className="mr-2 h-5 w-5" />
-              Skip
+              <SkipForward className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm md:text-base">Skip</span>
             </Button>
             <Button
               size="lg"
               onClick={() => handleReview("correct")}
-              className="h-16 bg-gradient-primary hover:opacity-90 transition-opacity"
+              className="h-12 sm:h-14 md:h-16 bg-gradient-primary hover:opacity-90 transition-opacity flex-col sm:flex-row gap-1 sm:gap-2 active:scale-95 transition-transform"
             >
-              <Check className="mr-2 h-5 w-5" />
-              Correct
+              <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm md:text-base">Correct</span>
             </Button>
           </div>
         )}

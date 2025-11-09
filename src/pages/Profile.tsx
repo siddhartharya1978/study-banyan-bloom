@@ -100,31 +100,32 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-4">
-      <div className="container mx-auto max-w-2xl py-8">
-        <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-3 sm:p-4">
+      <div className="container mx-auto max-w-2xl py-4 sm:py-8">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="mb-4 sm:mb-6 text-xs sm:text-sm">
+          <ArrowLeft className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
           Back to Dashboard
         </Button>
 
-        <Card className="p-8 animate-spring-in shadow-medium">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold bg-gradient-hero bg-clip-text text-transparent mb-2">
+        <Card className="p-4 sm:p-6 md:p-8 animate-spring-in shadow-medium">
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-hero bg-clip-text text-transparent mb-2">
               Personalize Your Learning
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Tell us about yourself so we can create the perfect study experience 🌱
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="display_name">Display Name</Label>
+              <Label htmlFor="display_name" className="text-sm sm:text-base">Display Name</Label>
               <Input
                 id="display_name"
                 value={profile.display_name || ""}
                 onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
                 placeholder="What should we call you?"
+                className="h-10 sm:h-11 text-sm sm:text-base"
               />
             </div>
 
@@ -203,17 +204,17 @@ const Profile = () => {
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-12"
+              className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-11 sm:h-12 text-sm sm:text-base"
             >
               {isSaving ? (
                 <>
-                  <Sparkles className="mr-2 h-5 w-5 animate-spin" />
-                  Saving...
+                  <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 h-5 w-5" />
-                  Save Profile
+                  <Save className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>Save Profile</span>
                 </>
               )}
             </Button>

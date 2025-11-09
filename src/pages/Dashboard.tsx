@@ -120,53 +120,53 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-hero bg-clip-text text-transparent mb-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-hero bg-clip-text text-transparent mb-1 sm:mb-2">
               Your Learning Tree
             </h1>
-            <p className="text-muted-foreground">Keep growing! 🌱</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Keep growing! 🌱</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/diagnostics")}>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="sm" onClick={() => navigate("/diagnostics")} className="text-xs sm:text-sm flex-1 sm:flex-none">
               Diagnostics
             </Button>
-            <Button variant="outline" onClick={() => navigate("/profile")}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/profile")} className="text-xs sm:text-sm flex-1 sm:flex-none">
               Profile
             </Button>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
+            <Button variant="outline" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm flex-1 sm:flex-none">
+              <LogOut className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Sign Out</span>
             </Button>
           </div>
         </div>
 
         {/* Progress Card */}
         {progress && (
-          <Card className="p-6 mb-8 shadow-medium">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
+          <Card className="p-4 sm:p-6 mb-6 sm:mb-8 shadow-medium">
+            <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="flex justify-center">
                 <TreeVisualization level={progress.tree_level || 1} animated />
               </div>
               
-              <div className="grid grid-cols-2 gap-4 content-center">
-                <div className="text-center p-4 bg-gradient-primary rounded-lg text-primary-foreground">
-                  <p className="text-3xl font-bold">{progress.xp}</p>
-                  <p className="text-sm opacity-80">Total XP</p>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 content-center">
+                <div className="text-center p-3 sm:p-4 bg-gradient-primary rounded-lg text-primary-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold">{progress.xp}</p>
+                  <p className="text-xs sm:text-sm opacity-80">Total XP</p>
                 </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-3xl font-bold text-foreground">{progress.level}</p>
-                  <p className="text-sm text-muted-foreground">Level</p>
+                <div className="text-center p-3 sm:p-4 bg-muted rounded-lg">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{progress.level}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Level</p>
                 </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-3xl font-bold text-accent">{progress.streak_days} 🔥</p>
-                  <p className="text-sm text-muted-foreground">Day Streak</p>
+                <div className="text-center p-3 sm:p-4 bg-muted rounded-lg">
+                  <p className="text-2xl sm:text-3xl font-bold text-accent">{progress.streak_days} 🔥</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Day Streak</p>
                 </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-3xl font-bold text-foreground">{progress.total_cards_reviewed}</p>
-                  <p className="text-sm text-muted-foreground">Cards Reviewed</p>
+                <div className="text-center p-3 sm:p-4 bg-muted rounded-lg">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{progress.total_cards_reviewed}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Cards Reviewed</p>
                 </div>
               </div>
             </div>
@@ -209,19 +209,19 @@ const Dashboard = () => {
         )}
 
         {/* Decks */}
-        <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">Your Decks</h2>
-          <Button onClick={() => navigate("/")} className="bg-gradient-primary">
-            <Plus className="mr-2 h-4 w-4" />
-            Create New Deck
+        <div className="mb-4 sm:mb-6 flex flex-col xs:flex-row justify-between items-start xs:items-center gap-3">
+          <h2 className="text-xl sm:text-2xl font-semibold">Your Decks</h2>
+          <Button onClick={() => navigate("/")} size="sm" className="bg-gradient-primary w-full xs:w-auto">
+            <Plus className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm">Create New Deck</span>
           </Button>
         </div>
 
         {decks.length === 0 ? (
-          <Card className="p-12 text-center">
-            <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">No decks yet</h3>
-            <p className="text-muted-foreground mb-4">
+          <Card className="p-8 sm:p-12 text-center">
+            <BookOpen className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-muted-foreground" />
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">No decks yet</h3>
+            <p className="text-sm sm:text-base text-muted-foreground mb-4">
               Create your first study deck to start learning!
             </p>
             <Button onClick={() => navigate("/")} className="bg-gradient-primary">
@@ -230,20 +230,20 @@ const Dashboard = () => {
             </Button>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {decks.map((deck) => (
               <Card
                 key={deck.id}
-                className="p-6 hover:shadow-medium transition-shadow cursor-pointer"
+                className="p-4 sm:p-6 hover:shadow-medium transition-shadow cursor-pointer active:scale-[0.98]"
                 onClick={() => navigate(`/study/${deck.id}`)}
               >
-                <h3 className="font-semibold text-lg mb-2">{deck.title}</h3>
+                <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">{deck.title}</h3>
                 {deck.description && (
-                  <p className="text-sm text-muted-foreground mb-4">{deck.description}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">{deck.description}</p>
                 )}
-                <div className="flex justify-between items-center text-sm">
+                <div className="flex justify-between items-center text-xs sm:text-sm">
                   <span className="text-muted-foreground">{deck.card_count} cards</span>
-                  <Button size="sm" className="bg-gradient-primary">
+                  <Button size="sm" className="bg-gradient-primary text-xs h-8">
                     Study Now
                   </Button>
                 </div>
