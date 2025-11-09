@@ -13,11 +13,9 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@radix-ui/react-tooltip": path.resolve(__dirname, "./src/components/ui/tooltip.tsx"),
     },
   },
   optimizeDeps: {
-    exclude: ['@radix-ui/react-tooltip'],
-    force: true,
+    include: ['@radix-ui/react-tooltip'],
   },
 }));
