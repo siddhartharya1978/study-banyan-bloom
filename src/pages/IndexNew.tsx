@@ -151,8 +151,8 @@ const Index = () => {
         body: { sourceId: source.id },
       });
 
+      // Handle both user errors (400) and system errors (500+)
       if (functionError) {
-        // Extract detailed error message if available
         const errorMessage = data?.error || functionError.message || "Processing failed";
         throw new Error(errorMessage);
       }

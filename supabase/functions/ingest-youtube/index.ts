@@ -190,6 +190,12 @@ serve(async (req) => {
     console.error(`[${correlationId}] Error:`, error);
     const errorMessage = error.message || "Unknown error";
     
+    // Determine if this is a user error (400) or system error (500)
+    const isUserError = errorMessage.includes("YouTube transcript not available") ||
+                        errorMessage.includes("Invalid YouTube URL") ||
+                        errorMessage.includes("Transcript too short");
+    const statusCode = isUserError ? 400 : 500;
+    
     // Update source with error
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -205,7 +211,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ error: errorMessage, correlationId }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: statusCode, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
