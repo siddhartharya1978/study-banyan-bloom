@@ -147,34 +147,29 @@ const Index = () => {
       if (sourceError) throw sourceError;
 
       const functionName = isYoutube ? "ingest-youtube" : "ingest-url";
-      const { data, error: functionError } = await supabase.functions.invoke(functionName, {
+      
+      console.log(`Invoking ${functionName} for source:`, source.id);
+      
+      const response = await supabase.functions.invoke(functionName, {
         body: { sourceId: source.id },
       });
 
-      // Handle both user errors (400) and system errors (500+)
-      if (functionError) {
-        // Try to extract the error message from various possible locations
+      console.log("Function response:", response);
+
+      // Handle errors from edge function
+      if (response.error) {
+        console.error("Function error:", response.error);
+        // Extract error message - Supabase wraps 400/500 errors differently
         let errorMessage = "Processing failed";
         
-        try {
-          // Parse the error context if it exists
-          if (functionError.context && typeof functionError.context === 'object') {
-            errorMessage = functionError.context.error || errorMessage;
-          } else if (data?.error) {
-            errorMessage = data.error;
-          } else if (functionError.message) {
-            // Try to parse JSON from error message
-            try {
-              const parsed = JSON.parse(functionError.message);
-              errorMessage = parsed.error || errorMessage;
-            } catch {
-              errorMessage = functionError.message;
-            }
-          }
-        } catch (e) {
-          console.error("Error parsing function error:", e);
+        // Try multiple ways to extract the error message
+        if (response.data?.error) {
+          errorMessage = response.data.error;
+        } else if (response.error.message) {
+          errorMessage = response.error.message;
         }
         
+        console.log("Extracted error message:", errorMessage);
         throw new Error(errorMessage);
       }
 
@@ -187,8 +182,10 @@ const Index = () => {
       navigate("/dashboard");
     } catch (error: any) {
       console.error("URL submission error:", error);
+      
+      // Don't navigate away on error
       toast({
-        title: "Error",
+        title: "Unable to process content",
         description: error.message || "Failed to process URL",
         variant: "destructive",
       });
