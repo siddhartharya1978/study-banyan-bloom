@@ -21,38 +21,67 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-// Fetch transcript from YouTube using youtube-transcript API
+// Fetch transcript using YouTube's timedtext API (no external API needed)
 async function fetchTranscript(videoId: string): Promise<string | null> {
   try {
-    // Use a public YouTube transcript proxy
-    const response = await fetch(`https://youtube-transcriptor.p.rapidapi.com/transcript?video_id=${videoId}`, {
-      headers: {
-        'X-RapidAPI-Key': Deno.env.get('RAPIDAPI_KEY') || '',
-      }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.transcript) {
-        return data.transcript.map((t: any) => t.text).join(' ');
-      }
-    }
-
-    // Fallback: Use a simpler approach with public APIs
-    console.log(`Attempting alternative transcript fetch for video: ${videoId}`);
+    // Step 1: Get video page to extract caption tracks
+    const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
+    const html = await pageResponse.text();
     
-    // Try alternative public endpoint
-    const altResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
-    const html = await altResponse.text();
+    // Step 2: Extract caption track URLs from the page
+    const captionRegex = /"captionTracks":\s*(\[.*?\])/;
+    const match = html.match(captionRegex);
     
-    // Check if captions are available in the page
-    if (html.includes('"captions"')) {
-      console.log(`Captions detected but extraction not fully implemented for: ${videoId}`);
-      // For MVP: Generate placeholder content with video metadata
-      return `YouTube Video Analysis for ${videoId}\n\nThis is a YouTube video. Full transcript extraction requires additional API setup. Please use the URL or PDF options for complete content ingestion.`;
+    if (!match || !match[1]) {
+      console.log(`No captions available for video: ${videoId}`);
+      return null;
     }
     
-    return null;
+    const captionTracks = JSON.parse(match[1]);
+    if (!captionTracks || captionTracks.length === 0) {
+      return null;
+    }
+    
+    // Step 3: Prefer English captions, fall back to first available
+    let captionUrl = captionTracks.find((track: any) => 
+      track.languageCode === 'en' || track.languageCode?.startsWith('en')
+    )?.baseUrl || captionTracks[0]?.baseUrl;
+    
+    if (!captionUrl) {
+      return null;
+    }
+    
+    // Step 4: Fetch and parse the transcript XML
+    const transcriptResponse = await fetch(captionUrl);
+    const transcriptXml = await transcriptResponse.text();
+    
+    // Step 5: Extract text from XML (simple regex parsing)
+    const textRegex = /<text[^>]*>(.*?)<\/text>/gs;
+    const textMatches = [...transcriptXml.matchAll(textRegex)];
+    
+    if (textMatches.length === 0) {
+      return null;
+    }
+    
+    // Step 6: Decode HTML entities and join text
+    const transcript = textMatches
+      .map(match => {
+        let text = match[1];
+        // Decode HTML entities
+        text = text.replace(/&amp;/g, '&')
+                   .replace(/&lt;/g, '<')
+                   .replace(/&gt;/g, '>')
+                   .replace(/&quot;/g, '"')
+                   .replace(/&#39;/g, "'")
+                   .replace(/&nbsp;/g, ' ')
+                   .replace(/<[^>]*>/g, ''); // Remove any remaining HTML tags
+        return text.trim();
+      })
+      .filter(text => text.length > 0)
+      .join(' ');
+    
+    return transcript;
+    
   } catch (error) {
     console.error("Error fetching transcript:", error);
     return null;
@@ -109,17 +138,23 @@ serve(async (req) => {
     
     if (!transcript) {
       throw new Error(
-        "YouTube transcript not available. This video may not have captions enabled. Please try: 1) A video with captions/subtitles, 2) Upload PDF, or 3) Paste article URL instead."
+        "YouTube transcript not available. This video doesn't have captions/subtitles enabled. Please try:\n" +
+        "1) A video with captions (CC button visible)\n" +
+        "2) Upload a PDF instead\n" +
+        "3) Paste an article URL"
       );
     }
 
-    const content = transcript;
-
-    if (content.length < 100) {
-      throw new Error("Not enough content in transcript (< 100 chars)");
+    if (transcript.length < 100) {
+      throw new Error("Transcript too short (< 100 characters). Video may be too brief or captions incomplete.");
     }
 
-    console.log(`[${correlationId}] Extracted ${content.length} characters from transcript`);
+    console.log(`[${correlationId}] Extracted ${transcript.length} characters from transcript`);
+
+    // Limit content to reasonable size (~40k chars)
+    const content = transcript.length > 40000 
+      ? transcript.substring(0, 40000) + "\n\n[Content truncated to 40,000 characters]"
+      : transcript;
 
     // Update source with content
     const { error: updateError } = await supabase
@@ -127,7 +162,7 @@ serve(async (req) => {
       .update({
         title: title,
         content: content,
-        language: "en", // TODO: Detect language from transcript
+        language: "en",
         status: "completed",
         error: null,
       })
