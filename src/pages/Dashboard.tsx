@@ -130,6 +130,9 @@ const Dashboard = () => {
             <p className="text-muted-foreground">Keep growing! 🌱</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/diagnostics")}>
+              Diagnostics
+            </Button>
             <Button variant="outline" onClick={() => navigate("/profile")}>
               Profile
             </Button>

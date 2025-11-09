@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
+import { motion } from "framer-motion";
 import FAQ from "@/components/FAQ";
 import Testimonials from "@/components/Testimonials";
 import banyanLogo from "@/assets/banyan-logo.png";

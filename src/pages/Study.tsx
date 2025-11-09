@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Sparkles, Check, X, SkipForward, Clock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
 
 type CardType = Database["public"]["Tables"]["cards"]["Row"];
