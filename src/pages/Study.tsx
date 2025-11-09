@@ -381,14 +381,14 @@ const Study = () => {
                   <Button
                     key={idx}
                     variant="outline"
-                    className="w-full text-left justify-start h-auto py-3 sm:py-4 px-4 sm:px-6 hover:bg-accent hover:text-accent-foreground text-sm sm:text-base active:scale-[0.98] transition-transform"
+                    className="w-full text-left justify-start h-auto py-3 sm:py-4 px-4 sm:px-6 hover:bg-accent hover:text-accent-foreground text-sm sm:text-base active:scale-[0.98] transition-transform whitespace-normal"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowAnswer(true);
                     }}
                   >
-                    <span className="font-semibold mr-2 sm:mr-3 text-primary min-w-[20px] sm:min-w-[24px]">{String.fromCharCode(65 + idx)}.</span>
-                    <span className="flex-1">{option}</span>
+                    <span className="font-semibold mr-2 sm:mr-3 text-primary min-w-[20px] sm:min-w-[24px] shrink-0">{String.fromCharCode(65 + idx)}.</span>
+                    <span className="flex-1 break-words">{option}</span>
                   </Button>
                 ))}
               </div>
