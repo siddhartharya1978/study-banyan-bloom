@@ -24,42 +24,97 @@ function extractVideoId(url: string): string | null {
 // Fetch transcript using YouTube's timedtext API (no external API needed)
 async function fetchTranscript(videoId: string): Promise<string | null> {
   try {
+    console.log(`Fetching page for video: ${videoId}`);
+    
     // Step 1: Get video page to extract caption tracks
     const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
     const html = await pageResponse.text();
     
-    // Step 2: Extract caption track URLs from the page
-    const captionRegex = /"captionTracks":\s*(\[.*?\])/;
-    const match = html.match(captionRegex);
+    console.log(`Page fetched, HTML length: ${html.length} characters`);
     
-    if (!match || !match[1]) {
-      console.log(`No captions available for video: ${videoId}`);
-      return null;
+    // Step 2: Extract caption track URLs from the page - try multiple patterns
+    let captionTracks = null;
+    
+    // Pattern 1: Look for captionTracks in player response
+    const playerResponseMatch = html.match(/"captions":\s*\{[^}]*"playerCaptionsTracklistRenderer":\s*\{[^}]*"captionTracks":\s*(\[[^\]]+\])/);
+    
+    if (playerResponseMatch && playerResponseMatch[1]) {
+      console.log("Found caption tracks using playerResponseMatch");
+      try {
+        captionTracks = JSON.parse(playerResponseMatch[1]);
+      } catch (e) {
+        console.error("Failed to parse caption tracks from playerResponse:", e);
+      }
     }
     
-    const captionTracks = JSON.parse(match[1]);
+    // Pattern 2: Direct captionTracks search (fallback)
+    if (!captionTracks) {
+      const directMatch = html.match(/"captionTracks":\s*(\[[^\]]*\])/);
+      if (directMatch && directMatch[1]) {
+        console.log("Found caption tracks using directMatch");
+        try {
+          captionTracks = JSON.parse(directMatch[1]);
+        } catch (e) {
+          console.error("Failed to parse caption tracks from directMatch:", e);
+        }
+      }
+    }
+    
+    // Pattern 3: Look in ytInitialPlayerResponse
+    if (!captionTracks) {
+      const ytPlayerMatch = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/);
+      if (ytPlayerMatch && ytPlayerMatch[1]) {
+        console.log("Found ytInitialPlayerResponse");
+        try {
+          const playerResponse = JSON.parse(ytPlayerMatch[1]);
+          captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+          if (captionTracks) {
+            console.log("Extracted caption tracks from ytInitialPlayerResponse");
+          }
+        } catch (e) {
+          console.error("Failed to parse ytInitialPlayerResponse:", e);
+        }
+      }
+    }
+    
     if (!captionTracks || captionTracks.length === 0) {
+      console.log(`No captions found for video: ${videoId}`);
+      console.log("Tried all patterns - captions may not be available");
       return null;
     }
+    
+    console.log(`Found ${captionTracks.length} caption track(s)`);
+    console.log("Available languages:", captionTracks.map((t: any) => t.languageCode || t.vssId).join(", "));
     
     // Step 3: Prefer English captions, fall back to first available
-    let captionUrl = captionTracks.find((track: any) => 
+    let selectedTrack = captionTracks.find((track: any) => 
       track.languageCode === 'en' || track.languageCode?.startsWith('en')
-    )?.baseUrl || captionTracks[0]?.baseUrl;
+    ) || captionTracks[0];
+    
+    const captionUrl = selectedTrack?.baseUrl;
     
     if (!captionUrl) {
+      console.error("Caption track found but no baseUrl available");
       return null;
     }
+    
+    console.log(`Selected caption language: ${selectedTrack.languageCode || 'unknown'}`);
+    console.log(`Fetching transcript from: ${captionUrl.substring(0, 100)}...`);
     
     // Step 4: Fetch and parse the transcript XML
     const transcriptResponse = await fetch(captionUrl);
     const transcriptXml = await transcriptResponse.text();
     
+    console.log(`Transcript XML fetched, length: ${transcriptXml.length} characters`);
+    
     // Step 5: Extract text from XML (simple regex parsing)
     const textRegex = /<text[^>]*>(.*?)<\/text>/gs;
     const textMatches = [...transcriptXml.matchAll(textRegex)];
     
+    console.log(`Found ${textMatches.length} text segments in transcript`);
+    
     if (textMatches.length === 0) {
+      console.error("No text segments found in transcript XML");
       return null;
     }
     
@@ -80,10 +135,15 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
       .filter(text => text.length > 0)
       .join(' ');
     
+    console.log(`Final transcript length: ${transcript.length} characters`);
+    
     return transcript;
     
   } catch (error) {
     console.error("Error fetching transcript:", error);
+    if (error instanceof Error) {
+      console.error("Error stack:", error.stack);
+    }
     return null;
   }
 }
