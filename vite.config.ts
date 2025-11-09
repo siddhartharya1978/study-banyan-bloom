@@ -17,5 +17,8 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: ['@radix-ui/react-tooltip'],
+    force: true,
   },
+  // Force cache invalidation
+  cacheDir: ".vite-cache",
 }));
