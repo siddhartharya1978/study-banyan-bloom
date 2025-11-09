@@ -95,9 +95,12 @@ serve(async (req) => {
 
   const correlationId = crypto.randomUUID();
   console.log(`[${correlationId}] Starting YouTube ingestion`);
+  
+  let sourceId: string | undefined;
 
   try {
-    const { sourceId } = await req.json();
+    const body = await req.json();
+    sourceId = body.sourceId;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -196,18 +199,21 @@ serve(async (req) => {
                         errorMessage.includes("Transcript too short");
     const statusCode = isUserError ? 400 : 500;
     
-    // Update source with error
-    try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      const { sourceId } = await req.json();
-      
-      await supabase
-        .from("sources")
-        .update({ status: "failed", error: errorMessage })
-        .eq("id", sourceId);
-    } catch {}
+    // Update source with error if we have the sourceId
+    if (sourceId) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        
+        await supabase
+          .from("sources")
+          .update({ status: "failed", error: errorMessage })
+          .eq("id", sourceId);
+      } catch (updateError) {
+        console.error(`[${correlationId}] Failed to update source error:`, updateError);
+      }
+    }
     
     return new Response(
       JSON.stringify({ error: errorMessage, correlationId }),
