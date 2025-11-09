@@ -74,6 +74,13 @@ export type Database = {
             referencedRelation: "decks"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_cards_deck"
+            columns: ["deck_id"]
+            isOneToOne: false
+            referencedRelation: "decks"
+            referencedColumns: ["id"]
+          },
         ]
       }
       chunks: {
@@ -107,6 +114,13 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "chunks_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_chunks_source"
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "sources"
@@ -160,6 +174,20 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_decks_source"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_decks_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -245,6 +273,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_reviews_card"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_reviews_deck"
+            columns: ["deck_id"]
+            isOneToOne: false
+            referencedRelation: "decks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_reviews_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "reviews_card_id_fkey"
             columns: ["card_id"]
             isOneToOne: false
@@ -306,7 +355,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_sources_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_progress: {
         Row: {
