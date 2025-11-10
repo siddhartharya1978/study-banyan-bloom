@@ -181,6 +181,15 @@ async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
       
       const playerData = await playerResponse.json();
       
+      // Check playability status first
+      if (playerData.playabilityStatus) {
+        console.log(`[player] ${client.name} playabilityStatus:`, playerData.playabilityStatus.status);
+        if (playerData.playabilityStatus.status !== 'OK') {
+          console.log(`[player] ${client.name} reason:`, playerData.playabilityStatus.reason || 'unknown');
+          continue;
+        }
+      }
+      
       // Log response structure for debugging
       console.log(`[player] ${client.name} response keys:`, Object.keys(playerData));
       if (playerData.captions) {
@@ -209,7 +218,47 @@ async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
   }
 }
 
-// Main transcript fetcher with cascade: timedtext → player → fail
+// Step C: Try to extract from embedded page data
+async function fetchEmbeddedTranscript(videoId: string): Promise<string | null> {
+  try {
+    console.log(`[embedded] Trying to extract ytInitialPlayerResponse from page`);
+    
+    const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+F+678',
+      }
+    });
+    
+    const html = await pageResponse.text();
+    
+    // Extract ytInitialPlayerResponse
+    const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/);
+    if (!playerResponseMatch) {
+      console.log('[embedded] Could not find ytInitialPlayerResponse');
+      return null;
+    }
+    
+    const playerData = JSON.parse(playerResponseMatch[1]);
+    console.log('[embedded] Found ytInitialPlayerResponse');
+    
+    const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+    if (!captionTracks || captionTracks.length === 0) {
+      console.log('[embedded] No caption tracks in embedded data');
+      return null;
+    }
+    
+    console.log(`[embedded] Found ${captionTracks.length} caption tracks`);
+    return await extractTranscriptFromTracks(captionTracks, videoId);
+    
+  } catch (error) {
+    console.error("[embedded] Error:", error);
+    return null;
+  }
+}
+
+// Main transcript fetcher with cascade: timedtext → player → embedded → fail
 async function fetchTranscript(videoId: string): Promise<string | null> {
   try {
     console.log(`Fetching transcript for video: ${videoId}`);
@@ -228,6 +277,15 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
     if (playerResult) {
       console.log('✓ Transcript obtained via player API');
       return playerResult;
+    }
+    
+    console.log('⚠ Player API failed, trying embedded page data...');
+    
+    // Step C: Try embedded page data
+    const embeddedResult = await fetchEmbeddedTranscript(videoId);
+    if (embeddedResult) {
+      console.log('✓ Transcript obtained via embedded page data');
+      return embeddedResult;
     }
     
     console.log('✗ All methods failed - no accessible captions');
