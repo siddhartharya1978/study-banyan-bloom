@@ -140,38 +140,64 @@ async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
     
     console.log(`[player] Using API key: ${apiKey.substring(0, 20)}...`);
     
-    // Try multiple client types for better compatibility
+    // Try multiple client types - TV clients are less restricted
     const clients = [
+      { name: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER', version: '2.0', hl: 'en', gl: 'US', clientScreen: 'EMBED' },
       { name: 'WEB', version: '2.20250110.01.00', hl: 'en', gl: 'US' },
       { name: 'ANDROID', version: '19.09.37', hl: 'en', gl: 'US' },
-      { name: 'IOS', version: '19.09.3', hl: 'en', gl: 'US' },
     ];
     
     for (const client of clients) {
       console.log(`[player] Trying ${client.name} client...`);
       
+      const clientContext: any = {
+        clientName: client.name,
+        clientVersion: client.version,
+        hl: client.hl,
+        gl: client.gl,
+      };
+      
+      // Add clientScreen for embedded players
+      if (client.clientScreen) {
+        clientContext.clientScreen = client.clientScreen;
+      }
+      
+      const requestBody: any = {
+        context: {
+          client: clientContext,
+        },
+        videoId: videoId,
+      };
+      
+      // Only add params for non-TV clients
+      if (!client.name.includes('TV')) {
+        requestBody.params = 'CgIQBg=='; // Enable captions
+      }
+      
+      // TV clients need thirdParty config
+      if (client.name.includes('TV')) {
+        requestBody.context.thirdParty = {
+          embedUrl: `https://www.youtube.com/watch?v=${videoId}`
+        };
+      }
+      
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      };
+      
+      // Add client-specific headers only for non-TV clients
+      if (!client.name.includes('TV')) {
+        headers['X-YouTube-Client-Name'] = client.name === 'WEB' ? '1' : client.name === 'ANDROID' ? '3' : '5';
+        headers['X-YouTube-Client-Version'] = client.version;
+        headers['Origin'] = 'https://www.youtube.com';
+        headers['Referer'] = `https://www.youtube.com/watch?v=${videoId}`;
+      }
+      
       const playerResponse = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${apiKey}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'X-YouTube-Client-Name': client.name === 'WEB' ? '1' : client.name === 'ANDROID' ? '3' : '5',
-          'X-YouTube-Client-Version': client.version,
-          'Origin': 'https://www.youtube.com',
-          'Referer': `https://www.youtube.com/watch?v=${videoId}`,
-        },
-        body: JSON.stringify({
-          context: {
-            client: {
-              clientName: client.name,
-              clientVersion: client.version,
-              hl: client.hl,
-              gl: client.gl,
-            }
-          },
-          videoId: videoId,
-          params: 'CgIQBg==', // Enable captions
-        })
+        headers,
+        body: JSON.stringify(requestBody)
       });
       
       if (!playerResponse.ok) {
