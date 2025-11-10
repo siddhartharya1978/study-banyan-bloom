@@ -120,129 +120,59 @@ async function fetchTimedtextTranscript(videoId: string): Promise<string | null>
   }
 }
 
-// Step B: Fallback to InnerTube player API - try multiple clients
+// Step B: Fallback to InnerTube player API - try iOS client with proper config
 async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
   try {
-    console.log(`[player] Fetching captions via InnerTube player API`);
+    console.log(`[player] Trying iOS client (known to bypass restrictions)`);
     
-    // First, get the API key from the page
-    const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+    // iOS client with proper configuration - this is the most reliable
+    const playerResponse = await fetch(`https://www.youtube.com/youtubei/v1/player?key=AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc&prettyPrint=false`, {
+      method: 'POST',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+F+678',
-      }
-    });
-    
-    const html = await pageResponse.text();
-    const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
-    const apiKey = apiKeyMatch ? apiKeyMatch[1] : 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
-    
-    console.log(`[player] Using API key: ${apiKey.substring(0, 20)}...`);
-    
-    // Try multiple client types - ANDROID_TESTSUITE bypasses most restrictions
-    const clients = [
-      { name: 'ANDROID_TESTSUITE', version: '1.9', hl: 'en', gl: 'US' },
-      { name: 'ANDROID_MUSIC', version: '7.11.50', hl: 'en', gl: 'US' },
-      { name: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER', version: '2.0', hl: 'en', gl: 'US', clientScreen: 'EMBED' },
-    ];
-    
-    for (const client of clients) {
-      console.log(`[player] Trying ${client.name} client...`);
-      
-      const clientContext: any = {
-        clientName: client.name,
-        clientVersion: client.version,
-        hl: client.hl,
-        gl: client.gl,
-      };
-      
-      // Add clientScreen for embedded players
-      if (client.clientScreen) {
-        clientContext.clientScreen = client.clientScreen;
-      }
-      
-      const requestBody: any = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)',
+        'X-Youtube-Client-Name': '5',
+        'X-Youtube-Client-Version': '19.09.3',
+      },
+      body: JSON.stringify({
         context: {
-          client: clientContext,
+          client: {
+            hl: 'en',
+            gl: 'US',
+            clientName: 'IOS',
+            clientVersion: '19.09.3',
+            deviceModel: 'iPhone16,2',
+            osName: 'iPhone',
+            osVersion: '17.5.1.21F90',
+          }
         },
         videoId: videoId,
-      };
-      
-      // Only add params for non-TV clients
-      if (!client.name.includes('TV')) {
-        requestBody.params = 'CgIQBg=='; // Enable captions
-      }
-      
-      // TV clients need thirdParty config
-      if (client.name.includes('TV')) {
-        requestBody.context.thirdParty = {
-          embedUrl: `https://www.youtube.com/watch?v=${videoId}`
-        };
-      }
-      
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-      
-      // Use appropriate User-Agent based on client type
-      if (client.name.includes('ANDROID')) {
-        headers['User-Agent'] = 'com.google.android.youtube/19.09.37 (Linux; U; Android 14) gzip';
-      } else {
-        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-      }
-      
-      // Add client-specific headers only for non-TV clients
-      if (!client.name.includes('TV')) {
-        headers['X-YouTube-Client-Name'] = client.name === 'WEB' ? '1' : client.name === 'ANDROID' ? '3' : '5';
-        headers['X-YouTube-Client-Version'] = client.version;
-        headers['Origin'] = 'https://www.youtube.com';
-        headers['Referer'] = `https://www.youtube.com/watch?v=${videoId}`;
-      }
-      
-      const playerResponse = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${apiKey}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(requestBody)
-      });
-      
-      if (!playerResponse.ok) {
-        console.log(`[player] ${client.name} client failed: ${playerResponse.status}`);
-        continue;
-      }
-      
-      const playerData = await playerResponse.json();
-      
-      // Check playability status first
-      if (playerData.playabilityStatus) {
-        console.log(`[player] ${client.name} playabilityStatus:`, playerData.playabilityStatus.status);
-        if (playerData.playabilityStatus.status !== 'OK') {
-          console.log(`[player] ${client.name} reason:`, playerData.playabilityStatus.reason || 'unknown');
-          continue;
-        }
-      }
-      
-      // Log response structure for debugging
-      console.log(`[player] ${client.name} response keys:`, Object.keys(playerData));
-      if (playerData.captions) {
-        console.log(`[player] ${client.name} captions keys:`, Object.keys(playerData.captions));
-      }
-      
-      const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-      
-      if (!captionTracks || captionTracks.length === 0) {
-        console.log(`[player] ${client.name} - No caption tracks in response`);
-        continue;
-      }
-      
-      console.log(`[player] ${client.name} - Found ${captionTracks.length} caption tracks`);
-      
-      const result = await extractTranscriptFromTracks(captionTracks, videoId);
-      if (result) return result;
+      })
+    });
+    
+    if (!playerResponse.ok) {
+      console.log(`[player] iOS client request failed: ${playerResponse.status}`);
+      return null;
     }
     
-    console.log('[player] All clients failed to get captions');
-    return null;
+    const playerData = await playerResponse.json();
+    
+    // Check playability
+    if (playerData.playabilityStatus?.status !== 'OK') {
+      console.log(`[player] Playability status: ${playerData.playabilityStatus?.status}`);
+      console.log(`[player] Reason: ${playerData.playabilityStatus?.reason || 'unknown'}`);
+      return null;
+    }
+    
+    const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+    
+    if (!captionTracks || captionTracks.length === 0) {
+      console.log('[player] No caption tracks found in iOS response');
+      return null;
+    }
+    
+    console.log(`[player] ✓ Found ${captionTracks.length} caption tracks via iOS client`);
+    return await extractTranscriptFromTracks(captionTracks, videoId);
     
   } catch (error) {
     console.error("[player] Error:", error);
