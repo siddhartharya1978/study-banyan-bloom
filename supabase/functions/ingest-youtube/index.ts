@@ -120,7 +120,7 @@ async function fetchTimedtextTranscript(videoId: string): Promise<string | null>
   }
 }
 
-// Step B: Fallback to InnerTube player API (Android client - more stable than Web)
+// Step B: Fallback to InnerTube player API - try multiple clients
 async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
   try {
     console.log(`[player] Fetching captions via InnerTube player API`);
@@ -140,42 +140,68 @@ async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
     
     console.log(`[player] Using API key: ${apiKey.substring(0, 20)}...`);
     
-    // Call player endpoint with Android client (more reliable)
-    const playerResponse = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-      body: JSON.stringify({
-        context: {
-          client: {
-            clientName: 'ANDROID',
-            clientVersion: '19.09.37',
-            hl: 'en',
-            gl: 'US',
-          }
+    // Try multiple client types for better compatibility
+    const clients = [
+      { name: 'WEB', version: '2.20250110.01.00', hl: 'en', gl: 'US' },
+      { name: 'ANDROID', version: '19.09.37', hl: 'en', gl: 'US' },
+      { name: 'IOS', version: '19.09.3', hl: 'en', gl: 'US' },
+    ];
+    
+    for (const client of clients) {
+      console.log(`[player] Trying ${client.name} client...`);
+      
+      const playerResponse = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'X-YouTube-Client-Name': client.name === 'WEB' ? '1' : client.name === 'ANDROID' ? '3' : '5',
+          'X-YouTube-Client-Version': client.version,
+          'Origin': 'https://www.youtube.com',
+          'Referer': `https://www.youtube.com/watch?v=${videoId}`,
         },
-        videoId: videoId
-      })
-    });
-    
-    if (!playerResponse.ok) {
-      console.log(`[player] Player API failed: ${playerResponse.status}`);
-      return null;
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: client.name,
+              clientVersion: client.version,
+              hl: client.hl,
+              gl: client.gl,
+            }
+          },
+          videoId: videoId,
+          params: 'CgIQBg==', // Enable captions
+        })
+      });
+      
+      if (!playerResponse.ok) {
+        console.log(`[player] ${client.name} client failed: ${playerResponse.status}`);
+        continue;
+      }
+      
+      const playerData = await playerResponse.json();
+      
+      // Log response structure for debugging
+      console.log(`[player] ${client.name} response keys:`, Object.keys(playerData));
+      if (playerData.captions) {
+        console.log(`[player] ${client.name} captions keys:`, Object.keys(playerData.captions));
+      }
+      
+      const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      
+      if (!captionTracks || captionTracks.length === 0) {
+        console.log(`[player] ${client.name} - No caption tracks in response`);
+        continue;
+      }
+      
+      console.log(`[player] ${client.name} - Found ${captionTracks.length} caption tracks`);
+      
+      const result = await extractTranscriptFromTracks(captionTracks, videoId);
+      if (result) return result;
     }
     
-    const playerData = await playerResponse.json();
-    const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-    
-    if (!captionTracks || captionTracks.length === 0) {
-      console.log('[player] No caption tracks in player response');
-      return null;
-    }
-    
-    console.log(`[player] Found ${captionTracks.length} caption tracks`);
-    
-    return await extractTranscriptFromTracks(captionTracks, videoId);
+    console.log('[player] All clients failed to get captions');
+    return null;
     
   } catch (error) {
     console.error("[player] Error:", error);
