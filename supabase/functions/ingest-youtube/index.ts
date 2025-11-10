@@ -60,19 +60,44 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
       }
     }
     
-    // Pattern 3: Look in ytInitialPlayerResponse
+    // Pattern 3: Look in ytInitialPlayerResponse with proper JSON extraction
     if (!captionTracks) {
-      const ytPlayerMatch = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/);
-      if (ytPlayerMatch && ytPlayerMatch[1]) {
+      const ytPlayerStart = html.indexOf('ytInitialPlayerResponse');
+      if (ytPlayerStart !== -1) {
         console.log("Found ytInitialPlayerResponse");
-        try {
-          const playerResponse = JSON.parse(ytPlayerMatch[1]);
-          captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-          if (captionTracks) {
-            console.log("Extracted caption tracks from ytInitialPlayerResponse");
+        
+        // Find the start of the JSON object
+        const jsonStart = html.indexOf('{', ytPlayerStart);
+        if (jsonStart !== -1) {
+          // Find matching closing brace by counting braces
+          let braceCount = 0;
+          let jsonEnd = jsonStart;
+          for (let i = jsonStart; i < html.length; i++) {
+            if (html[i] === '{') braceCount++;
+            if (html[i] === '}') braceCount--;
+            if (braceCount === 0) {
+              jsonEnd = i;
+              break;
+            }
           }
-        } catch (e) {
-          console.error("Failed to parse ytInitialPlayerResponse:", e);
+          
+          try {
+            const jsonStr = html.substring(jsonStart, jsonEnd + 1);
+            console.log(`Extracted JSON length: ${jsonStr.length} characters`);
+            const playerResponse = JSON.parse(jsonStr);
+            console.log("Successfully parsed ytInitialPlayerResponse");
+            
+            // Try multiple paths to find captions
+            captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+            
+            if (captionTracks) {
+              console.log("Extracted caption tracks from ytInitialPlayerResponse");
+            } else {
+              console.log("playerResponse structure:", JSON.stringify(playerResponse?.captions || {}).substring(0, 500));
+            }
+          } catch (e) {
+            console.error("Failed to parse ytInitialPlayerResponse:", e);
+          }
         }
       }
     }
