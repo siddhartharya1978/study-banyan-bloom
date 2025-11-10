@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, LogOut, Plus, BookOpen, X } from "lucide-react";
+import { Sparkles, LogOut, BookOpen, X } from "lucide-react";
 import TreeVisualization from "@/components/TreeVisualization";
+import ContentUploader from "@/components/ContentUploader";
 import type { Database } from "@/integrations/supabase/types";
 
 type Deck = Database["public"]["Tables"]["decks"]["Row"];
@@ -208,26 +209,23 @@ const Dashboard = () => {
           </Card>
         )}
 
+        {/* Content Uploader */}
+        <div className="mb-8">
+          <ContentUploader />
+        </div>
+
         {/* Decks */}
-        <div className="mb-4 sm:mb-6 flex flex-col xs:flex-row justify-between items-start xs:items-center gap-3">
-          <h2 className="text-xl sm:text-2xl font-semibold">Your Decks</h2>
-          <Button onClick={() => navigate("/")} size="sm" className="bg-gradient-primary w-full xs:w-auto">
-            <Plus className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm">Create New Deck</span>
-          </Button>
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-semibold">Your Study Decks</h2>
         </div>
 
         {decks.length === 0 ? (
           <Card className="p-8 sm:p-12 text-center">
             <BookOpen className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-muted-foreground" />
             <h3 className="text-lg sm:text-xl font-semibold mb-2">No decks yet</h3>
-            <p className="text-sm sm:text-base text-muted-foreground mb-4">
-              Create your first study deck to start learning!
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Use the form above to create your first study deck!
             </p>
-            <Button onClick={() => navigate("/")} className="bg-gradient-primary">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Deck
-            </Button>
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

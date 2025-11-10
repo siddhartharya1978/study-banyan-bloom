@@ -120,30 +120,25 @@ async function fetchTimedtextTranscript(videoId: string): Promise<string | null>
   }
 }
 
-// Step B: Fallback to InnerTube player API - try iOS client with proper config
+// Step B: Fallback to InnerTube player API - simplified iOS client
 async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
   try {
-    console.log(`[player] Trying iOS client (known to bypass restrictions)`);
+    console.log(`[player] Trying iOS client (most reliable method)`);
     
-    // iOS client with proper configuration - this is the most reliable
-    const playerResponse = await fetch(`https://www.youtube.com/youtubei/v1/player?key=AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc&prettyPrint=false`, {
+    // Minimal iOS client config - cleaner and more reliable
+    const playerResponse = await fetch(`https://www.youtube.com/youtubei/v1/player`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)',
-        'X-Youtube-Client-Name': '5',
-        'X-Youtube-Client-Version': '19.09.3',
+        'User-Agent': 'com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)',
       },
       body: JSON.stringify({
         context: {
           client: {
-            hl: 'en',
-            gl: 'US',
             clientName: 'IOS',
             clientVersion: '19.09.3',
-            deviceModel: 'iPhone16,2',
-            osName: 'iPhone',
-            osVersion: '17.5.1.21F90',
+            hl: 'en',
+            gl: 'US',
           }
         },
         videoId: videoId,
@@ -151,27 +146,27 @@ async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
     });
     
     if (!playerResponse.ok) {
-      console.log(`[player] iOS client request failed: ${playerResponse.status}`);
+      console.log(`[player] Request failed with status: ${playerResponse.status}`);
       return null;
     }
     
     const playerData = await playerResponse.json();
     
-    // Check playability
-    if (playerData.playabilityStatus?.status !== 'OK') {
-      console.log(`[player] Playability status: ${playerData.playabilityStatus?.status}`);
+    // Check playability - be more lenient
+    const playabilityStatus = playerData.playabilityStatus?.status;
+    if (playabilityStatus && playabilityStatus !== 'OK' && playabilityStatus !== 'UNPLAYABLE') {
+      console.log(`[player] Video status: ${playabilityStatus}`);
       console.log(`[player] Reason: ${playerData.playabilityStatus?.reason || 'unknown'}`);
-      return null;
     }
     
     const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
     
     if (!captionTracks || captionTracks.length === 0) {
-      console.log('[player] No caption tracks found in iOS response');
+      console.log('[player] No caption tracks available');
       return null;
     }
     
-    console.log(`[player] ✓ Found ${captionTracks.length} caption tracks via iOS client`);
+    console.log(`[player] ✓ Found ${captionTracks.length} caption track(s)`);
     return await extractTranscriptFromTracks(captionTracks, videoId);
     
   } catch (error) {
