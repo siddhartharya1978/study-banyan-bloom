@@ -140,11 +140,11 @@ async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
     
     console.log(`[player] Using API key: ${apiKey.substring(0, 20)}...`);
     
-    // Try multiple client types - TV clients are less restricted
+    // Try multiple client types - ANDROID_TESTSUITE bypasses most restrictions
     const clients = [
+      { name: 'ANDROID_TESTSUITE', version: '1.9', hl: 'en', gl: 'US' },
+      { name: 'ANDROID_MUSIC', version: '7.11.50', hl: 'en', gl: 'US' },
       { name: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER', version: '2.0', hl: 'en', gl: 'US', clientScreen: 'EMBED' },
-      { name: 'WEB', version: '2.20250110.01.00', hl: 'en', gl: 'US' },
-      { name: 'ANDROID', version: '19.09.37', hl: 'en', gl: 'US' },
     ];
     
     for (const client of clients) {
@@ -183,8 +183,14 @@ async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
       
       const headers: any = {
         'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       };
+      
+      // Use appropriate User-Agent based on client type
+      if (client.name.includes('ANDROID')) {
+        headers['User-Agent'] = 'com.google.android.youtube/19.09.37 (Linux; U; Android 14) gzip';
+      } else {
+        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      }
       
       // Add client-specific headers only for non-TV clients
       if (!client.name.includes('TV')) {
