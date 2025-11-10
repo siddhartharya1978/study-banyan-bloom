@@ -21,104 +21,127 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-// Fetch transcript using YouTube's internal API (more reliable than HTML scraping)
+// Fetch transcript using YouTube's InnerTube API (most reliable method)
 async function fetchTranscript(videoId: string): Promise<string | null> {
   try {
     console.log(`Fetching transcript for video: ${videoId}`);
     
-    // Method 1: Try the get_video_info endpoint (most reliable)
+    // Method 1: Use InnerTube API (most stable)
     try {
-      console.log("Attempting get_video_info endpoint...");
-      const infoUrl = `https://www.youtube.com/get_video_info?video_id=${videoId}`;
-      const infoResponse = await fetch(infoUrl, {
+      console.log("Attempting InnerTube API method...");
+      
+      // Fetch the page to extract API key and context
+      const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept-Language': 'en-US,en;q=0.9',
         }
       });
       
-      if (infoResponse.ok) {
-        const infoText = await infoResponse.text();
-        const params = new URLSearchParams(infoText);
-        const playerResponseStr = params.get('player_response');
+      const html = await pageResponse.text();
+      console.log(`Page fetched, HTML length: ${html.length} characters`);
+      
+      // Extract innertube API key
+      const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
+      const apiKey = apiKeyMatch ? apiKeyMatch[1] : 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'; // Fallback to common key
+      console.log(`Extracted API key: ${apiKey.substring(0, 20)}...`);
+      
+      // Extract client version
+      const clientVersionMatch = html.match(/"clientVersion":"([^"]+)"/);
+      const clientVersion = clientVersionMatch ? clientVersionMatch[1] : '2.20250110.01.00';
+      
+      // Try to get caption track list from InnerTube API
+      const innertubeUrl = `https://www.youtube.com/youtubei/v1/get_transcript?key=${apiKey}`;
+      const innertubeBody = {
+        context: {
+          client: {
+            clientName: 'WEB',
+            clientVersion: clientVersion,
+            hl: 'en',
+            gl: 'US',
+          }
+        },
+        params: videoId
+      };
+      
+      console.log(`Calling InnerTube API with video ID: ${videoId}`);
+      const transcriptResponse = await fetch(innertubeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        body: JSON.stringify(innertubeBody)
+      });
+      
+      if (transcriptResponse.ok) {
+        const transcriptData = await transcriptResponse.json();
+        console.log(`InnerTube API response received, status: ${transcriptResponse.status}`);
         
-        if (playerResponseStr) {
-          const playerResponse = JSON.parse(playerResponseStr);
-          const captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+        // Extract transcript from response
+        const actions = transcriptData?.actions;
+        if (actions && actions.length > 0) {
+          const transcriptAction = actions[0]?.updateEngagementPanelAction?.content?.transcriptRenderer?.body?.transcriptBodyRenderer;
+          const cueGroups = transcriptAction?.cueGroups;
           
-          if (captionTracks && captionTracks.length > 0) {
-            console.log(`Found ${captionTracks.length} caption tracks via get_video_info`);
-            return await extractTranscriptFromTracks(captionTracks, videoId);
+          if (cueGroups && cueGroups.length > 0) {
+            console.log(`Found ${cueGroups.length} transcript segments via InnerTube API`);
+            const transcript = cueGroups
+              .map((group: any) => {
+                const cue = group?.transcriptCueGroupRenderer?.cues?.[0]?.transcriptCueRenderer;
+                return cue?.cue?.simpleText || '';
+              })
+              .filter((text: string) => text.length > 0)
+              .join(' ');
+            
+            if (transcript.length > 0) {
+              console.log(`Successfully extracted transcript: ${transcript.length} characters`);
+              return transcript;
+            }
           }
         }
       }
+      
+      console.log("InnerTube API method didn't return transcript, trying caption tracks...");
     } catch (e) {
-      console.log("get_video_info method failed, trying HTML scraping:", e);
+      console.log("InnerTube API method failed:", e);
     }
     
-    // Method 2: Fallback to HTML scraping with better headers
-    console.log("Attempting HTML scraping method...");
+    // Method 2: Fall back to caption track extraction from page HTML
+    console.log("Attempting caption track extraction from HTML...");
     const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
       }
     });
     
     const html = await pageResponse.text();
-    console.log(`Page fetched, HTML length: ${html.length} characters`);
     
-    // Try to extract captionTracks from various locations in the HTML
+    // Try multiple patterns to find caption tracks
     let captionTracks = null;
     
-    // Pattern 1: Direct captionTracks in JSON
-    const captionTracksMatch = html.match(/"captionTracks":\s*(\[{[^\]]+\])/);
-    if (captionTracksMatch) {
+    // Pattern 1: Direct captionTracks array
+    const directMatch = html.match(/"captionTracks":\s*(\[[^\]]+\])/);
+    if (directMatch) {
       try {
-        captionTracks = JSON.parse(captionTracksMatch[1]);
-        console.log("Found caption tracks via direct match");
+        captionTracks = JSON.parse(directMatch[1]);
+        console.log(`Found ${captionTracks.length} caption tracks via direct match`);
       } catch (e) {
-        console.log("Failed to parse direct caption tracks:", e);
+        console.log("Failed to parse direct caption tracks");
       }
     }
     
-    // Pattern 2: Look in ytInitialPlayerResponse
+    // Pattern 2: Extract from ytInitialPlayerResponse
     if (!captionTracks) {
-      // Find ytInitialPlayerResponse more carefully
-      const ytPlayerMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?})\s*;/);
-      if (ytPlayerMatch) {
+      const playerResponseMatch = html.match(/"captions":\s*\{"playerCaptionsTracklistRenderer":\s*\{"captionTracks":\s*(\[[^\]]+\])/);
+      if (playerResponseMatch) {
         try {
-          // Clean up the JSON string
-          let jsonStr = ytPlayerMatch[1];
-          
-          // Try to find the end of the object more accurately
-          let braceCount = 0;
-          let endPos = 0;
-          for (let i = 0; i < jsonStr.length; i++) {
-            if (jsonStr[i] === '{') braceCount++;
-            else if (jsonStr[i] === '}') braceCount--;
-            
-            if (braceCount === 0) {
-              endPos = i + 1;
-              break;
-            }
-          }
-          
-          if (endPos > 0) {
-            jsonStr = jsonStr.substring(0, endPos);
-          }
-          
-          const playerResponse = JSON.parse(jsonStr);
-          captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-          
-          if (captionTracks) {
-            console.log("Found caption tracks via ytInitialPlayerResponse");
-          }
+          captionTracks = JSON.parse(playerResponseMatch[1]);
+          console.log(`Found ${captionTracks.length} caption tracks via player response`);
         } catch (e) {
-          console.log("Failed to parse ytInitialPlayerResponse:", e);
+          console.log("Failed to parse player response caption tracks");
         }
       }
     }
