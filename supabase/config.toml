@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.ingest-youtube]
 verify_jwt = false
+
+[functions.explain-answer]
+verify_jwt = false

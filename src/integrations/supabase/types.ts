@@ -14,15 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      badges: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          requirement: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          requirement?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          requirement?: Json | null
+        }
+        Relationships: []
+      }
       cards: {
         Row: {
           answer: string
+          bloom_level: string | null
           card_type: string
           citation: string | null
           confidence_score: number | null
           created_at: string | null
           deck_id: string
           easiness_factor: number | null
+          explanation: string | null
           id: string
           interval_days: number | null
           last_reviewed_at: string | null
@@ -30,16 +59,20 @@ export type Database = {
           options: Json | null
           question: string
           review_count: number | null
+          source_span: string | null
+          topic: string | null
           updated_at: string | null
         }
         Insert: {
           answer: string
+          bloom_level?: string | null
           card_type: string
           citation?: string | null
           confidence_score?: number | null
           created_at?: string | null
           deck_id: string
           easiness_factor?: number | null
+          explanation?: string | null
           id?: string
           interval_days?: number | null
           last_reviewed_at?: string | null
@@ -47,16 +80,20 @@ export type Database = {
           options?: Json | null
           question: string
           review_count?: number | null
+          source_span?: string | null
+          topic?: string | null
           updated_at?: string | null
         }
         Update: {
           answer?: string
+          bloom_level?: string | null
           card_type?: string
           citation?: string | null
           confidence_score?: number | null
           created_at?: string | null
           deck_id?: string
           easiness_factor?: number | null
+          explanation?: string | null
           id?: string
           interval_days?: number | null
           last_reviewed_at?: string | null
@@ -64,6 +101,8 @@ export type Database = {
           options?: Json | null
           question?: string
           review_count?: number | null
+          source_span?: string | null
+          topic?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -124,6 +163,50 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concepts: {
+        Row: {
+          correct_count: number | null
+          created_at: string | null
+          deck_id: string
+          id: string
+          last_seen_at: string | null
+          mastery: number | null
+          name: string
+          seen_count: number | null
+          user_id: string
+        }
+        Insert: {
+          correct_count?: number | null
+          created_at?: string | null
+          deck_id: string
+          id?: string
+          last_seen_at?: string | null
+          mastery?: number | null
+          name: string
+          seen_count?: number | null
+          user_id: string
+        }
+        Update: {
+          correct_count?: number | null
+          created_at?: string | null
+          deck_id?: string
+          id?: string
+          last_seen_at?: string | null
+          mastery?: number | null
+          name?: string
+          seen_count?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concepts_deck_id_fkey"
+            columns: ["deck_id"]
+            isOneToOne: false
+            referencedRelation: "decks"
             referencedColumns: ["id"]
           },
         ]
@@ -242,8 +325,10 @@ export type Database = {
           card_id: string
           created_at: string | null
           deck_id: string
+          difficulty_at_attempt: number | null
           id: string
           metadata: Json | null
+          response_ms: number | null
           result: string
           session_id: string | null
           time_spent_seconds: number | null
@@ -253,8 +338,10 @@ export type Database = {
           card_id: string
           created_at?: string | null
           deck_id: string
+          difficulty_at_attempt?: number | null
           id?: string
           metadata?: Json | null
+          response_ms?: number | null
           result: string
           session_id?: string | null
           time_spent_seconds?: number | null
@@ -264,8 +351,10 @@ export type Database = {
           card_id?: string
           created_at?: string | null
           deck_id?: string
+          difficulty_at_attempt?: number | null
           id?: string
           metadata?: Json | null
+          response_ms?: number | null
           result?: string
           session_id?: string | null
           time_spent_seconds?: number | null
@@ -365,6 +454,32 @@ export type Database = {
           },
         ]
       }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string | null
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string | null
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_progress: {
         Row: {
           created_at: string | null
@@ -373,6 +488,7 @@ export type Database = {
           level: number | null
           metadata: Json | null
           streak_days: number | null
+          streak_vault: number | null
           total_cards_reviewed: number | null
           total_decks_completed: number | null
           tree_level: number | null
@@ -386,6 +502,7 @@ export type Database = {
           level?: number | null
           metadata?: Json | null
           streak_days?: number | null
+          streak_vault?: number | null
           total_cards_reviewed?: number | null
           total_decks_completed?: number | null
           tree_level?: number | null
@@ -399,6 +516,7 @@ export type Database = {
           level?: number | null
           metadata?: Json | null
           streak_days?: number | null
+          streak_vault?: number | null
           total_cards_reviewed?: number | null
           total_decks_completed?: number | null
           tree_level?: number | null

@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Sparkles, LogOut, BookOpen, X } from "lucide-react";
 import TreeVisualization from "@/components/TreeVisualization";
 import ContentUploader from "@/components/ContentUploader";
+import LanguageToggle from "@/components/LanguageToggle";
+import BadgeDisplay from "@/components/BadgeDisplay";
+import { useTranslation } from "react-i18next";
 import type { Database } from "@/integrations/supabase/types";
 
 type Deck = Database["public"]["Tables"]["decks"]["Row"];
@@ -18,8 +21,10 @@ const Dashboard = () => {
   const [sources, setSources] = useState<Source[]>([]);
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string>("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     checkAuth();
@@ -54,6 +59,7 @@ const Dashboard = () => {
       return;
     }
 
+    setUserId(session.user.id);
     await loadDashboard();
   };
 
@@ -172,6 +178,13 @@ const Dashboard = () => {
               </div>
             </div>
           </Card>
+        )}
+
+        {/* Badges Display */}
+        {userId && (
+          <div className="mb-6 sm:mb-8">
+            <BadgeDisplay userId={userId} />
+          </div>
         )}
 
         {/* Processing Status */}

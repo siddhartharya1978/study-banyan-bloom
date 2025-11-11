@@ -7,14 +7,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Zod validation schemas
+// Zod validation schemas with Bloom's taxonomy
 const CardSchema = z.object({
   type: z.enum(["flashcard", "mcq", "cloze"]),
+  topic: z.string().max(50).optional(),
+  bloom_level: z.enum(["remember", "understand", "apply", "analyze", "evaluate", "create"]).optional(),
   question: z.string().min(1),
   answer: z.string().min(1),
   options: z.array(z.string()).optional(),
   explanation: z.string().max(400).optional(),
   citation: z.string().optional(),
+  source_span: z.string().max(200).optional(),
   difficulty: z.number().int().min(1).max(3).default(2),
 });
 
@@ -118,8 +121,8 @@ serve(async (req) => {
       hard: "advanced concepts, minimal hints, technical vocabulary",
     };
 
-    // System prompt for deck generation
-    const systemPrompt = `You are an expert educator creating study materials.
+    // System prompt for deck generation with Bloom's taxonomy
+    const systemPrompt = `You are an expert Indian educator creating adaptive study materials.
 Generate a study deck with flashcards and MCQs from the provided content.
 Target audience: ${complexityMap[ageGroup]}
 Difficulty level: ${difficultyMap[difficulty]}
@@ -133,17 +136,22 @@ Required JSON structure:
   "cards": [
     {
       "type": "flashcard",
+      "topic": "Main concept (1-3 words)",
+      "bloom_level": "remember|understand|apply|analyze|evaluate|create",
       "question": "Question text",
       "answer": "Answer text",
       "citation": "Source reference",
+      "source_span": "Brief quote from source (optional)",
       "difficulty": 1
     },
     {
       "type": "mcq",
+      "topic": "Main concept",
+      "bloom_level": "apply",
       "question": "Question text",
       "answer": "Correct answer",
       "options": ["Option A", "Option B", "Option C", "Option D"],
-      "explanation": "Why this is correct (max 400 chars)",
+      "explanation": "Why correct + why others wrong (max 400 chars)",
       "citation": "Source reference",
       "difficulty": 2
     }
@@ -153,11 +161,15 @@ Required JSON structure:
 Rules:
 - Create 8-12 cards total
 - Mix flashcards and MCQs (at least 3 of each)
+- Distribute Bloom's levels (at least 2 remember, 2 understand, 2 apply+)
+- Extract topic for each card (e.g., "Photosynthesis", "Newton's Laws")
 - Keep questions clear and concise
-- MCQs must have exactly 4 options
+- MCQs must have exactly 4 plausible options (no "All of the above")
+- Add explanations that teach why answer is correct and others wrong
 - difficulty: 1=easy, 2=medium, 3=hard
 - All citations should reference the source material
-- Questions should test understanding, not just memory`;
+- Questions should test understanding, not just memory
+- For Hindi content, keep technical terms in English (e.g., DNA, GDP)`;
 
     // Call AI with retry logic
     const aiData = await retryWithBackoff(async () => {
@@ -260,14 +272,18 @@ Rules:
 
     if (deckError) throw deckError;
 
-    // Create cards
+    // Create cards with new fields
     const cards = deckData.cards.map((card) => ({
       deck_id: deck.id,
       card_type: card.type,
+      topic: card.topic || null,
+      bloom_level: card.bloom_level || null,
       question: card.question,
       answer: card.answer,
       options: card.options ? JSON.stringify(card.options) : null,
+      explanation: card.explanation || null,
       citation: card.citation || source.title,
+      source_span: card.source_span || null,
       confidence_score: 0.9,
       easiness_factor: 2.5,
       interval_days: 1,
