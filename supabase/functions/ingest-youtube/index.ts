@@ -21,300 +21,88 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-// Step A: Try official timedtext API first (most reliable, no keys needed)
+// Step 1: Try fetching transcript via timedtext API (no API key needed)
 async function fetchTimedtextTranscript(videoId: string): Promise<string | null> {
   try {
-    console.log(`[timedtext] Fetching track list for video: ${videoId}`);
+    console.log(`[timedtext] Fetching captions for video: ${videoId}`);
     
-    // Get list of available caption tracks
-    const listResponse = await fetch(`https://www.youtube.com/api/timedtext?type=list&v=${videoId}`, {
-      headers: {
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+F+678',
-      }
-    });
+    // Try multiple language codes
+    const langCodes = ['en', 'en-US', 'hi', 'hi-IN', 'en-GB'];
     
-    if (!listResponse.ok) {
-      console.log(`[timedtext] List request failed: ${listResponse.status}`);
-      return null;
-    }
-    
-    const listXml = await listResponse.text();
-    console.log(`[timedtext] Track list XML length: ${listXml.length}`);
-    
-    // Parse tracks - prefer manual, then ASR, prioritize English variants
-    const trackRegex = /<track[^>]*lang_code="([^"]+)"[^>]*kind="([^"]*)"[^>]*\/>/g;
-    const tracks: Array<{ lang: string; kind: string; isAsr: boolean }> = [];
-    
-    let match;
-    while ((match = trackRegex.exec(listXml)) !== null) {
-      tracks.push({ lang: match[1], kind: match[2], isAsr: match[2] === 'asr' });
-    }
-    
-    console.log(`[timedtext] Found ${tracks.length} tracks:`, tracks.map(t => `${t.lang}${t.isAsr ? '(asr)' : ''}`).join(', '));
-    
-    if (tracks.length === 0) {
-      console.log('[timedtext] No tracks found');
-      return null;
-    }
-    
-    // Priority: manual en/en-US → ASR en/en-US → any manual → any ASR → first available
-    const priorityOrder = [
-      tracks.find(t => !t.isAsr && (t.lang === 'en' || t.lang === 'en-US')),
-      tracks.find(t => t.isAsr && (t.lang === 'en' || t.lang === 'en-US')),
-      tracks.find(t => !t.isAsr && t.lang.startsWith('en')),
-      tracks.find(t => t.isAsr && t.lang.startsWith('en')),
-      tracks.find(t => !t.isAsr),
-      tracks.find(t => t.isAsr),
-      tracks[0]
-    ];
-    
-    const selectedTrack = priorityOrder.find(t => t !== undefined);
-    if (!selectedTrack) return null;
-    
-    console.log(`[timedtext] Selected track: ${selectedTrack.lang} (${selectedTrack.isAsr ? 'ASR' : 'manual'})`);
-    
-    // Fetch transcript as json3 format
-    const transcriptUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&fmt=json3&lang=${selectedTrack.lang}${selectedTrack.isAsr ? '&kind=asr' : ''}`;
-    const transcriptResponse = await fetch(transcriptUrl, {
-      headers: {
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+F+678',
-      }
-    });
-    
-    if (!transcriptResponse.ok) {
-      console.log(`[timedtext] Transcript fetch failed: ${transcriptResponse.status}`);
-      return null;
-    }
-    
-    const transcriptData = await transcriptResponse.json();
-    
-    // Extract text from json3 format: events[].segs[].utf8
-    const events = transcriptData?.events || [];
-    const textSegments: string[] = [];
-    
-    for (const event of events) {
-      if (event.segs) {
-        for (const seg of event.segs) {
-          if (seg.utf8) {
-            textSegments.push(seg.utf8.trim());
+    for (const lang of langCodes) {
+      try {
+        const url = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&fmt=json3`;
+        const response = await fetch(url, {
+          headers: {
+            'Accept-Language': 'en-US,en;q=0.9',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          }
+        });
+        
+        if (!response.ok) continue;
+        
+        const data = await response.json();
+        const events = data?.events || [];
+        const textSegments: string[] = [];
+        
+        for (const event of events) {
+          if (event.segs) {
+            for (const seg of event.segs) {
+              if (seg.utf8) {
+                textSegments.push(seg.utf8.trim());
+              }
+            }
           }
         }
+        
+        const transcript = textSegments.filter(s => s.length > 0).join(' ');
+        
+        if (transcript.length > 100) {
+          console.log(`[timedtext] ✓ Found captions in ${lang}: ${transcript.length} chars`);
+          return transcript;
+        }
+      } catch (e) {
+        console.log(`[timedtext] Failed for ${lang}:`, e);
+        continue;
       }
     }
     
-    const transcript = textSegments.filter(s => s.length > 0).join(' ');
-    
-    if (transcript.length > 0) {
-      console.log(`[timedtext] Successfully extracted ${transcript.length} characters`);
-      return transcript;
-    }
-    
-    console.log('[timedtext] No text found in transcript data');
+    console.log('[timedtext] No captions found in any language');
     return null;
-    
   } catch (error) {
     console.error("[timedtext] Error:", error);
     return null;
   }
 }
 
-// Step B: Fallback to InnerTube player API - simplified iOS client
-async function fetchPlayerTranscript(videoId: string): Promise<string | null> {
+// Step 2: Fallback to extracting video description
+async function extractVideoDescription(videoId: string): Promise<string | null> {
   try {
-    console.log(`[player] Trying iOS client (most reliable method)`);
+    console.log(`[description] Extracting description for: ${videoId}`);
     
-    // Minimal iOS client config - cleaner and more reliable
-    const playerResponse = await fetch(`https://www.youtube.com/youtubei/v1/player`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)',
-      },
-      body: JSON.stringify({
-        context: {
-          client: {
-            clientName: 'IOS',
-            clientVersion: '19.09.3',
-            hl: 'en',
-            gl: 'US',
-          }
-        },
-        videoId: videoId,
-      })
-    });
-    
-    if (!playerResponse.ok) {
-      console.log(`[player] Request failed with status: ${playerResponse.status}`);
-      return null;
-    }
-    
-    const playerData = await playerResponse.json();
-    
-    // Check playability - be more lenient
-    const playabilityStatus = playerData.playabilityStatus?.status;
-    if (playabilityStatus && playabilityStatus !== 'OK' && playabilityStatus !== 'UNPLAYABLE') {
-      console.log(`[player] Video status: ${playabilityStatus}`);
-      console.log(`[player] Reason: ${playerData.playabilityStatus?.reason || 'unknown'}`);
-    }
-    
-    const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-    
-    if (!captionTracks || captionTracks.length === 0) {
-      console.log('[player] No caption tracks available');
-      return null;
-    }
-    
-    console.log(`[player] ✓ Found ${captionTracks.length} caption track(s)`);
-    return await extractTranscriptFromTracks(captionTracks, videoId);
-    
-  } catch (error) {
-    console.error("[player] Error:", error);
-    return null;
-  }
-}
-
-// Step C: Try to extract from embedded page data
-async function fetchEmbeddedTranscript(videoId: string): Promise<string | null> {
-  try {
-    console.log(`[embedded] Trying to extract ytInitialPlayerResponse from page`);
-    
+    // Get video page
     const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+F+678',
       }
     });
     
+    if (!pageResponse.ok) return null;
+    
     const html = await pageResponse.text();
     
-    // Extract ytInitialPlayerResponse
-    const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/);
-    if (!playerResponseMatch) {
-      console.log('[embedded] Could not find ytInitialPlayerResponse');
-      return null;
+    // Extract description
+    const descriptionMatch = html.match(/"description":\{"simpleText":"([^"]+)"/);
+    const description = descriptionMatch ? descriptionMatch[1].replace(/\\n/g, ' ') : '';
+    
+    if (description.length > 200) {
+      console.log(`[description] ✓ Found description: ${description.length} chars`);
+      return description;
     }
     
-    const playerData = JSON.parse(playerResponseMatch[1]);
-    console.log('[embedded] Found ytInitialPlayerResponse');
-    
-    const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-    if (!captionTracks || captionTracks.length === 0) {
-      console.log('[embedded] No caption tracks in embedded data');
-      return null;
-    }
-    
-    console.log(`[embedded] Found ${captionTracks.length} caption tracks`);
-    return await extractTranscriptFromTracks(captionTracks, videoId);
-    
-  } catch (error) {
-    console.error("[embedded] Error:", error);
     return null;
-  }
-}
-
-// Main transcript fetcher with cascade: timedtext → player → embedded → fail
-async function fetchTranscript(videoId: string): Promise<string | null> {
-  try {
-    console.log(`Fetching transcript for video: ${videoId}`);
-    
-    // Step A: Try timedtext API first (fastest, most reliable)
-    const timedtextResult = await fetchTimedtextTranscript(videoId);
-    if (timedtextResult) {
-      console.log('✓ Transcript obtained via timedtext API');
-      return timedtextResult;
-    }
-    
-    console.log('⚠ Timedtext API failed, trying player API...');
-    
-    // Step B: Fall back to player API
-    const playerResult = await fetchPlayerTranscript(videoId);
-    if (playerResult) {
-      console.log('✓ Transcript obtained via player API');
-      return playerResult;
-    }
-    
-    console.log('⚠ Player API failed, trying embedded page data...');
-    
-    // Step C: Try embedded page data
-    const embeddedResult = await fetchEmbeddedTranscript(videoId);
-    if (embeddedResult) {
-      console.log('✓ Transcript obtained via embedded page data');
-      return embeddedResult;
-    }
-    
-    console.log('✗ All methods failed - no accessible captions');
-    return null;
-    
   } catch (error) {
-    console.error("Error in fetchTranscript:", error);
-    return null;
-  }
-}
-
-// Helper function to extract transcript from caption tracks
-async function extractTranscriptFromTracks(captionTracks: any[], videoId: string): Promise<string | null> {
-  try {
-    
-    console.log(`Found ${captionTracks.length} caption track(s)`);
-    console.log("Available languages:", captionTracks.map((t: any) => t.languageCode || t.vssId).join(", "));
-    
-    // Prefer English captions, fall back to first available
-    let selectedTrack = captionTracks.find((track: any) => 
-      track.languageCode === 'en' || track.languageCode?.startsWith('en')
-    ) || captionTracks[0];
-    
-    const captionUrl = selectedTrack?.baseUrl;
-    
-    if (!captionUrl) {
-      console.error("Caption track found but no baseUrl available");
-      return null;
-    }
-    
-    console.log(`Selected caption language: ${selectedTrack.languageCode || 'unknown'}`);
-    console.log(`Fetching transcript from: ${captionUrl.substring(0, 100)}...`);
-    
-    // Fetch and parse the transcript XML
-    const transcriptResponse = await fetch(captionUrl);
-    const transcriptXml = await transcriptResponse.text();
-    
-    console.log(`Transcript XML fetched, length: ${transcriptXml.length} characters`);
-    
-    // Extract text from XML
-    const textRegex = /<text[^>]*>(.*?)<\/text>/gs;
-    const textMatches = [...transcriptXml.matchAll(textRegex)];
-    
-    console.log(`Found ${textMatches.length} text segments in transcript`);
-    
-    if (textMatches.length === 0) {
-      console.error("No text segments found in transcript XML");
-      return null;
-    }
-    
-    // Decode HTML entities and join text
-    const transcript = textMatches
-      .map(match => {
-        let text = match[1];
-        // Decode HTML entities
-        text = text.replace(/&amp;/g, '&')
-                   .replace(/&lt;/g, '<')
-                   .replace(/&gt;/g, '>')
-                   .replace(/&quot;/g, '"')
-                   .replace(/&#39;/g, "'")
-                   .replace(/&nbsp;/g, ' ')
-                   .replace(/<[^>]*>/g, '');
-        return text.trim();
-      })
-      .filter(text => text.length > 0)
-      .join(' ');
-    
-    console.log(`Final transcript length: ${transcript.length} characters`);
-    
-    return transcript;
-  } catch (error) {
-    console.error("Error extracting transcript from tracks:", error);
+    console.error("[description] Error:", error);
     return null;
   }
 }
@@ -348,7 +136,7 @@ serve(async (req) => {
 
     const videoId = extractVideoId(source.source_url!);
     if (!videoId) {
-      throw new Error("Invalid YouTube URL format");
+      throw new Error("Invalid YouTube URL format. Please check the URL and try again.");
     }
 
     console.log(`[${correlationId}] Processing YouTube video: ${videoId}`);
@@ -360,30 +148,51 @@ serve(async (req) => {
       .eq("id", sourceId);
 
     // Fetch video page to extract title
-    const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
+    const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      }
+    });
     const html = await pageResponse.text();
     
     // Extract title from meta tags
     const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/);
     const title = titleMatch ? titleMatch[1] : `YouTube Video ${videoId}`;
     
-    // Try to fetch transcript
-    const transcript = await fetchTranscript(videoId);
+    console.log(`[${correlationId}] Video title: ${title}`);
+    
+    // Step 1: Try timedtext captions first (fastest and most reliable)
+    let transcript = await fetchTimedtextTranscript(videoId);
+    
+    // Step 2: Fallback to video description
+    if (!transcript) {
+      console.log(`[${correlationId}] Captions not available, trying description...`);
+      transcript = await extractVideoDescription(videoId);
+      
+      if (transcript) {
+        transcript = `${title}\n\n${transcript}`;
+      }
+    }
     
     if (!transcript) {
       throw new Error(
-        "YouTube transcript not available. This video doesn't have captions/subtitles enabled. Please try:\n" +
-        "1) A video with captions (CC button visible)\n" +
-        "2) Upload a PDF instead\n" +
-        "3) Paste an article URL"
+        "📺 Unable to extract content from this video.\n\n" +
+        "This could happen if:\n" +
+        "• The video doesn't have captions/subtitles\n" +
+        "• The video lacks a detailed description\n" +
+        "• The video is private or age-restricted\n\n" +
+        "💡 Try instead:\n" +
+        "✓ A video with captions (look for the CC button)\n" +
+        "✓ Upload slides or notes as PDF\n" +
+        "✓ Paste an article URL from the web"
       );
     }
 
     if (transcript.length < 100) {
-      throw new Error("Transcript too short (< 100 characters). Video may be too brief or captions incomplete.");
+      throw new Error("Content too short (< 100 characters). Please try a longer video or different content.");
     }
 
-    console.log(`[${correlationId}] Extracted ${transcript.length} characters from transcript`);
+    console.log(`[${correlationId}] ✓ Extracted ${transcript.length} characters`);
 
     // Limit content to reasonable size (~40k chars)
     const content = transcript.length > 40000 
@@ -413,7 +222,7 @@ serve(async (req) => {
       console.error(`[${correlationId}] Failed to trigger deck generation:`, generateError);
     }
 
-    console.log(`[${correlationId}] YouTube ingestion complete`);
+    console.log(`[${correlationId}] ✓ YouTube ingestion complete`);
 
     return new Response(
       JSON.stringify({ success: true, sourceId, correlationId }),
@@ -422,12 +231,12 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error(`[${correlationId}] Error:`, error);
-    const errorMessage = error.message || "Unknown error";
+    const errorMessage = error.message || "Unknown error occurred";
     
     // Determine if this is a user error (400) or system error (500)
-    const isUserError = errorMessage.includes("YouTube transcript not available") ||
+    const isUserError = errorMessage.includes("Unable to extract content") ||
                         errorMessage.includes("Invalid YouTube URL") ||
-                        errorMessage.includes("Transcript too short");
+                        errorMessage.includes("Content too short");
     const statusCode = isUserError ? 400 : 500;
     
     // Update source with error if we have the sourceId

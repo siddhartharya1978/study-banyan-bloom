@@ -7,6 +7,12 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Sparkles, Check, X, SkipForward, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
+import posthog from "posthog-js";
+import { useTranslation } from "react-i18next";
+import { selectAdaptiveSession, updateConceptMastery } from "@/lib/adaptiveEngine";
+import { ShareTemplate } from "@/components/ShareTemplate";
+import { generateSessionImage, SessionStats } from "@/lib/shareImage";
 import type { Database } from "@/integrations/supabase/types";
 
 type CardType = Database["public"]["Tables"]["cards"]["Row"];
@@ -16,6 +22,7 @@ const Study = () => {
   const { deckId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   
   const [cards, setCards] = useState<CardType[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,6 +34,14 @@ const Study = () => {
   const [sessionStats, setSessionStats] = useState({ correct: 0, incorrect: 0, skipped: 0 });
   const [timeRemaining, setTimeRemaining] = useState(90); // 90 seconds for mini-review
   const [timerActive, setTimerActive] = useState(false);
+  const [showLeafBurst, setShowLeafBurst] = useState(false);
+  const [xpGained, setXpGained] = useState<number | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [explanation, setExplanation] = useState<string>("");
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [showShareTemplate, setShowShareTemplate] = useState(false);
+  const [cardFlipped, setCardFlipped] = useState(false);
+  const [userLevel, setUserLevel] = useState(1);
 
   useEffect(() => {
     loadCards();
@@ -58,7 +73,30 @@ const Study = () => {
         return;
       }
 
-      // Load cards for mini-review (exactly 8-10 cards)
+      // Get user progress for level
+      const { data: progress } = await supabase
+        .from("user_progress")
+        .select("level")
+        .eq("id", session.user.id)
+        .single();
+      
+      if (progress) setUserLevel(progress.level || 1);
+
+      // Use adaptive card selection
+      try {
+        const adaptiveCards = await selectAdaptiveSession(deckId!, session.user.id, 10);
+        if (adaptiveCards && adaptiveCards.length > 0) {
+          setCards(adaptiveCards);
+          setStartTime(Date.now());
+          setTimerActive(true);
+          setIsLoading(false);
+          return;
+        }
+      } catch (adaptiveError) {
+        console.log('Adaptive selection failed, falling back to standard:', adaptiveError);
+      }
+
+      // Fallback to standard selection
       const { data, error } = await supabase
         .from("cards")
         .select("*")
@@ -70,21 +108,20 @@ const Study = () => {
 
       if (!data || data.length === 0) {
         toast({
-          title: "No cards found",
-          description: "This deck doesn't have any cards yet",
+          title: t('study.noCards', 'No cards found'),
+          description: t('study.noCardsDesc', "This deck doesn't have any cards yet"),
         });
         navigate("/dashboard");
         return;
       }
 
-      // Lock to 8-10 cards for mini-review
       const miniReviewCards = data.slice(0, Math.min(10, Math.max(8, data.length)));
       setCards(miniReviewCards);
       setStartTime(Date.now());
-      setTimerActive(true); // Start timer
+      setTimerActive(true);
     } catch (error: any) {
       toast({
-        title: "Error loading cards",
+        title: t('common.error', 'Error loading cards'),
         description: error.message,
         variant: "destructive",
       });
@@ -170,6 +207,21 @@ const Study = () => {
         .insert(review);
 
       if (reviewError) throw reviewError;
+
+      // Trigger animations on correct answer
+      if (result === "correct") {
+        setShowLeafBurst(true);
+        setTimeout(() => setShowLeafBurst(false), 2000);
+        const xp = 10;
+        setXpGained(xp);
+        setTimeout(() => setXpGained(null), 2000);
+        posthog.capture('card_correct', { deck_id: deckId, card_id: currentCard.id });
+      }
+
+      // Update concept mastery
+      if (currentCard.topic && result !== "skip") {
+        await updateConceptMastery(userId, deckId!, currentCard.topic, result);
+      }
 
       // Update card with SM-2 algorithm
       if (result !== "skip") {
@@ -267,9 +319,18 @@ const Study = () => {
   };
 
   if (isLoading) {
+    const loadingMessages = [
+      t('dashboard.loadingMessages.0', 'Planting seeds... 🌱'),
+      t('dashboard.loadingMessages.1', 'Growing your tree... 🌳'),
+      t('dashboard.loadingMessages.2', 'Watering knowledge... 💧'),
+      t('dashboard.loadingMessages.3', 'Nurturing wisdom... ☀️'),
+    ];
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center">
-        <Sparkles className="h-12 w-12 text-primary animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex flex-col items-center justify-center gap-4">
+        <Sparkles className="h-16 w-16 text-primary animate-bounce" />
+        <p className="text-lg font-medium animate-pulse">
+          {loadingMessages[Math.floor(Math.random() * loadingMessages.length)]}
+        </p>
       </div>
     );
   }
@@ -280,6 +341,16 @@ const Study = () => {
       ? Math.round((sessionStats.correct / totalCards) * 100) 
       : 0;
     const xpEarned = sessionStats.correct * 10 + sessionStats.incorrect * 2;
+
+    // Trigger confetti on completion
+    useEffect(() => {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      posthog.capture('session_completed', { accuracy, xpEarned, deck_id: deckId });
+    }, []);
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-3 sm:p-4">
@@ -294,8 +365,14 @@ const Study = () => {
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
-            Shabash! 🎉
+            {t('study.complete', 'Shabash! 🎉')}
           </h2>
+          
+          {showShareTemplate && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+              <ShareTemplate stats={{ accuracy, xpEarned, level: userLevel, correct: sessionStats.correct, incorrect: sessionStats.incorrect }} />
+            </div>
+          )}
           <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8">
             Mini-review complete!
           </p>
@@ -329,10 +406,23 @@ const Study = () => {
             </Button>
             <Button 
               variant="outline"
+              onClick={async () => {
+                setShowShareTemplate(true);
+                setTimeout(async () => {
+                  await generateSessionImage({ accuracy, xpEarned, level: userLevel, correct: sessionStats.correct, incorrect: sessionStats.incorrect });
+                  setShowShareTemplate(false);
+                }, 100);
+              }}
+              className="w-full h-11 sm:h-12"
+            >
+              {t('study.share', '📤 Share Your Progress')}
+            </Button>
+            <Button 
+              variant="outline"
               onClick={() => navigate("/dashboard")}
               className="w-full h-11 sm:h-12"
             >
-              Back to Dashboard
+              {t('study.backToDashboard', 'Back to Dashboard')}
             </Button>
           </div>
         </Card>

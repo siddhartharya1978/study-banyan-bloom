@@ -1,0 +1,89 @@
+{
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Display Name (Optional)",
+    "createAccount": "Create Account",
+    "creatingAccount": "Creating account...",
+    "signingIn": "Signing in...",
+    "welcomeBack": "Welcome back! 🌳",
+    "welcomeNew": "Welcome to Banyan Tree! 🌱",
+    "startJourney": "Start your learning journey",
+    "mustBe6Chars": "Must be at least 6 characters"
+  },
+  "dashboard": {
+    "yourTree": "Your Learning Tree",
+    "level": "Level",
+    "xp": "XP",
+    "streak": "Day Streak",
+    "streakVault": "Streak Vault",
+    "myDecks": "My Study Decks",
+    "studyNow": "Study Now",
+    "cards": "cards",
+    "createNew": "Create New Study Deck",
+    "uploadPDF": "Upload PDF",
+    "pasteYouTube": "YouTube URL",
+    "pasteArticle": "Article URL",
+    "processing": "Processing...",
+    "failed": "Failed",
+    "retry": "Retry",
+    "emptyState": {
+      "title": "Your Tree is Waiting",
+      "description": "Plant your first seed of knowledge by uploading content",
+      "cta": "🌱 Create First Deck"
+    },
+    "loadingMessages": [
+      "Planting seeds... 🌱",
+      "Growing your tree... 🌳",
+      "Watering knowledge... 💧",
+      "Nurturing wisdom... ☀️"
+    ]
+  },
+  "study": {
+    "back": "Back",
+    "question": "Question",
+    "answer": "Answer",
+    "tapToReveal": "👆 Tap to reveal answer",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "skip": "Skip",
+    "explain": "🤔 Explain",
+    "complete": "Shabash! 🎉",
+    "miniReviewComplete": "Mini-review complete!",
+    "accuracy": "Accuracy",
+    "xpEarned": "XP",
+    "yourTreeGrowing": "Your tree is growing! 🌱",
+    "reviewAgain": "Review Again",
+    "backToDashboard": "Back to Dashboard",
+    "share": "📤 Share Your Progress",
+    "messages": {
+      "outstanding": "Outstanding! 🌟",
+      "great": "Great job! 🎉",
+      "keepGrowing": "Keep growing! 🌱",
+      "practice": "Practice makes perfect! 💪"
+    }
+  },
+  "profile": {
+    "yourProfile": "Your Profile",
+    "displayName": "Display Name",
+    "email": "Email",
+    "stats": "Your Stats",
+    "totalCardsReviewed": "Total Cards Reviewed",
+    "currentStreak": "Current Streak",
+    "days": "days",
+    "badges": "Your Badges",
+    "noBadges": "No badges earned yet. Keep studying!",
+    "signOut": "Sign Out"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit"
+  }
+}
