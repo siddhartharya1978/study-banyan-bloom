@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Sparkles } from "lucide-react";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -22,6 +23,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,14 +58,14 @@ const Auth = () => {
       if (error) throw error;
 
       toast({
-        title: "Welcome to Banyan Tree! 🌱",
-        description: "Your account has been created successfully",
+        title: t('auth.welcomeNew', 'Welcome to Banyan Tree! 🌱'),
+        description: t('auth.accountCreated', 'Your account has been created successfully'),
       });
 
       navigate("/dashboard");
     } catch (error: any) {
       toast({
-        title: "Sign up failed",
+        title: t('common.error', 'Error'),
         description: error.message,
         variant: "destructive",
       });
@@ -99,14 +101,14 @@ const Auth = () => {
       if (error) throw error;
 
       toast({
-        title: "Welcome back! 🌳",
-        description: "You've successfully signed in",
+        title: t('auth.welcomeBack', 'Welcome back! 🌳'),
+        description: t('auth.signedIn', "You've successfully signed in"),
       });
 
       navigate("/dashboard");
     } catch (error: any) {
       toast({
-        title: "Sign in failed",
+        title: t('common.error', 'Error'),
         description: error.message,
         variant: "destructive",
       });
@@ -130,19 +132,19 @@ const Auth = () => {
           <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
             Banyan Tree
           </h1>
-          <p className="text-muted-foreground">Start your learning journey</p>
+          <p className="text-muted-foreground">{t('auth.startJourney', 'Start your learning journey')}</p>
         </div>
 
         <Tabs defaultValue="signin" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="signin">{t('auth.signIn', 'Sign In')}</TabsTrigger>
+            <TabsTrigger value="signup">{t('auth.signUp', 'Sign Up')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signin">
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signin-email">Email</Label>
+                <Label htmlFor="signin-email">{t('auth.email', 'Email')}</Label>
                 <Input
                   id="signin-email"
                   type="email"
@@ -153,7 +155,7 @@ const Auth = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signin-password">Password</Label>
+                <Label htmlFor="signin-password">{t('auth.password', 'Password')}</Label>
                 <Input
                   id="signin-password"
                   type="password"
@@ -168,7 +170,7 @@ const Auth = () => {
                 className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
                 disabled={isLoading}
               >
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In')}
               </Button>
             </form>
           </TabsContent>
@@ -176,17 +178,17 @@ const Auth = () => {
           <TabsContent value="signup">
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-name">Display Name (Optional)</Label>
+                <Label htmlFor="signup-name">{t('auth.displayName', 'Display Name (Optional)')}</Label>
                 <Input
                   id="signup-name"
                   type="text"
-                  placeholder="Your name"
+                  placeholder={t('auth.yourName', 'Your name')}
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
+                <Label htmlFor="signup-email">{t('auth.email', 'Email')}</Label>
                 <Input
                   id="signup-email"
                   type="email"
@@ -197,7 +199,7 @@ const Auth = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
+                <Label htmlFor="signup-password">{t('auth.password', 'Password')}</Label>
                 <Input
                   id="signup-password"
                   type="password"
@@ -207,7 +209,7 @@ const Auth = () => {
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Must be at least 6 characters
+                  {t('auth.mustBe6Chars', 'Must be at least 6 characters')}
                 </p>
               </div>
               <Button
@@ -215,7 +217,7 @@ const Auth = () => {
                 className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
                 disabled={isLoading}
               >
-                {isLoading ? "Creating account..." : "Create Account"}
+                {isLoading ? t('auth.creatingAccount', 'Creating account...') : t('auth.createAccount', 'Create Account')}
               </Button>
             </form>
           </TabsContent>

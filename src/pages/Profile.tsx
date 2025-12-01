@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -15,6 +16,7 @@ type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<Partial<Profile>>({
@@ -75,14 +77,14 @@ const Profile = () => {
       if (error) throw error;
 
       toast({
-        title: "Profile updated! 🎉",
-        description: "Your learning experience will be personalized",
+        title: t('profile.updated', 'Profile updated! 🎉'),
+        description: t('profile.personalized', 'Your learning experience will be personalized'),
       });
 
       navigate("/dashboard");
     } catch (error: any) {
       toast({
-        title: "Error saving profile",
+        title: t('common.error', 'Error'),
         description: error.message,
         variant: "destructive",
       });
@@ -104,33 +106,33 @@ const Profile = () => {
       <div className="container mx-auto max-w-2xl py-4 sm:py-8">
         <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="mb-4 sm:mb-6 text-xs sm:text-sm">
           <ArrowLeft className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          Back to Dashboard
+          {t('study.backToDashboard', 'Back to Dashboard')}
         </Button>
 
         <Card className="p-4 sm:p-6 md:p-8 animate-spring-in shadow-medium">
           <div className="mb-4 sm:mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-hero bg-clip-text text-transparent mb-2">
-              Personalize Your Learning
+              {t('profile.personalize', 'Personalize Your Learning')}
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Tell us about yourself so we can create the perfect study experience 🌱
+              {t('profile.tellUs', 'Tell us about yourself so we can create the perfect study experience 🌱')}
             </p>
           </div>
 
           <div className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="display_name" className="text-sm sm:text-base">Display Name</Label>
+              <Label htmlFor="display_name" className="text-sm sm:text-base">{t('profile.displayName', 'Display Name')}</Label>
               <Input
                 id="display_name"
                 value={profile.display_name || ""}
                 onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
-                placeholder="What should we call you?"
+                placeholder={t('profile.whatCall', 'What should we call you?')}
                 className="h-10 sm:h-11 text-sm sm:text-base"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="age_group">Age Group</Label>
+              <Label htmlFor="age_group">{t('profile.ageGroup', 'Age Group')}</Label>
               <Select
                 value={profile.age_group || "adult"}
                 onValueChange={(value) => setProfile({ ...profile, age_group: value as any })}
@@ -139,19 +141,19 @@ const Profile = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="child">Child (5-12)</SelectItem>
-                  <SelectItem value="teen">Teen (13-17)</SelectItem>
-                  <SelectItem value="adult">Adult (18-59)</SelectItem>
-                  <SelectItem value="senior">Senior (60+)</SelectItem>
+                  <SelectItem value="child">{t('profile.child', 'Child (5-12)')}</SelectItem>
+                  <SelectItem value="teen">{t('profile.teen', 'Teen (13-17)')}</SelectItem>
+                  <SelectItem value="adult">{t('profile.adult', 'Adult (18-59)')}</SelectItem>
+                  <SelectItem value="senior">{t('profile.senior', 'Senior (60+)')}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                We'll adjust question complexity based on your age
+                {t('profile.adjustComplexity', "We'll adjust question complexity based on your age")}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="difficulty">Preferred Difficulty</Label>
+              <Label htmlFor="difficulty">{t('profile.difficulty', 'Preferred Difficulty')}</Label>
               <Select
                 value={profile.difficulty_preference || "medium"}
                 onValueChange={(value) => setProfile({ ...profile, difficulty_preference: value as any })}
@@ -160,15 +162,15 @@ const Profile = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="easy">Easy - Gentle Introduction</SelectItem>
-                  <SelectItem value="medium">Medium - Balanced Challenge</SelectItem>
-                  <SelectItem value="hard">Hard - Expert Level</SelectItem>
+                  <SelectItem value="easy">{t('profile.easy', 'Easy - Gentle Introduction')}</SelectItem>
+                  <SelectItem value="medium">{t('profile.medium', 'Medium - Balanced Challenge')}</SelectItem>
+                  <SelectItem value="hard">{t('profile.hard', 'Hard - Expert Level')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="daily_goal">Daily Goal (Cards)</Label>
+              <Label htmlFor="daily_goal">{t('profile.dailyGoal', 'Daily Goal (Cards)')}</Label>
               <Input
                 id="daily_goal"
                 type="number"
@@ -178,12 +180,12 @@ const Profile = () => {
                 onChange={(e) => setProfile({ ...profile, daily_goal: parseInt(e.target.value) })}
               />
               <p className="text-xs text-muted-foreground">
-                How many cards do you want to review each day?
+                {t('profile.howMany', 'How many cards do you want to review each day?')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="language">Preferred Language</Label>
+              <Label htmlFor="language">{t('profile.language', 'Preferred Language')}</Label>
               <Select
                 value={profile.preferred_language || "en"}
                 onValueChange={(value) => setProfile({ ...profile, preferred_language: value as any })}
@@ -197,7 +199,7 @@ const Profile = () => {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Language for study cards and interface
+                {t('profile.languageDesc', 'Language for study cards and interface')}
               </p>
             </div>
 
@@ -209,12 +211,12 @@ const Profile = () => {
               {isSaving ? (
                 <>
                   <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                  <span>Saving...</span>
+                  <span>{t('common.saving', 'Saving...')}</span>
                 </>
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>Save Profile</span>
+                  <span>{t('common.save', 'Save Profile')}</span>
                 </>
               )}
             </Button>

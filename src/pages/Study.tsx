@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { selectAdaptiveSession, updateConceptMastery } from "@/lib/adaptiveEngine";
 import { ShareTemplate } from "@/components/ShareTemplate";
 import { generateSessionImage, SessionStats } from "@/lib/shareImage";
+import LevelUpModal from "@/components/LevelUpModal";
 import type { Database } from "@/integrations/supabase/types";
 
 type CardType = Database["public"]["Tables"]["cards"]["Row"];
@@ -42,6 +43,9 @@ const Study = () => {
   const [showShareTemplate, setShowShareTemplate] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [userLevel, setUserLevel] = useState(1);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [newLevel, setNewLevel] = useState(1);
+  const [streakVaultEarned, setStreakVaultEarned] = useState(false);
 
   useEffect(() => {
     loadCards();
@@ -300,6 +304,10 @@ const Study = () => {
       const newLevel = Math.floor(newXp / 100) + 1;
       const newTreeLevel = Math.floor(newXp / 50) + 1; // Tree grows every 50 XP
 
+      // Check if leveled up (every 5 levels = streak vault)
+      const leveledUp = newLevel > (progress.level || 1);
+      const earnedStreakVault = leveledUp && newLevel % 5 === 0;
+
       const { error: updateError } = await supabase
         .from("user_progress")
         .update({
@@ -309,10 +317,18 @@ const Study = () => {
           last_study_date: today,
           total_cards_reviewed: (progress.total_cards_reviewed || 0) + (sessionStats.correct + sessionStats.incorrect),
           tree_level: newTreeLevel,
+          streak_vault: earnedStreakVault ? (progress.streak_vault || 0) + 1 : progress.streak_vault,
         })
         .eq("id", session.user.id);
 
       if (updateError) throw updateError;
+
+      // Show level-up modal if leveled up
+      if (leveledUp) {
+        setNewLevel(newLevel);
+        setStreakVaultEarned(earnedStreakVault);
+        setShowLevelUp(true);
+      }
     } catch (error: any) {
       console.error("Error updating progress:", error);
     }
@@ -433,14 +449,85 @@ const Study = () => {
   const currentCard = cards[currentIndex];
   const progress = ((currentIndex + 1) / cards.length) * 100;
 
+  const handleExplain = async () => {
+    setIsExplaining(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("explain-answer", {
+        body: {
+          cardId: currentCard.id,
+          question: currentCard.question,
+          correctAnswer: currentCard.answer,
+          options: currentCard.options ? JSON.parse(JSON.stringify(currentCard.options)) : null,
+          citation: currentCard.citation
+        }
+      });
+      if (error) throw error;
+      setExplanation(data.explanation);
+      setShowExplanation(true);
+    } catch (e) {
+      toast({ 
+        title: t('common.error', 'Error'), 
+        description: "Couldn't get explanation", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsExplaining(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-3 sm:p-4">
+      <LevelUpModal 
+        open={showLevelUp} 
+        onClose={() => setShowLevelUp(false)} 
+        level={newLevel} 
+        streakVaultSave={streakVaultEarned} 
+      />
+
+      {/* Leaf Burst Animation */}
+      <AnimatePresence>
+        {showLeafBurst && (
+          <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50">
+            {[...Array(8)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+                animate={{
+                  opacity: 0,
+                  scale: 1.5,
+                  x: Math.cos(i * Math.PI / 4) * 200,
+                  y: Math.sin(i * Math.PI / 4) * 200,
+                }}
+                transition={{ duration: 1.5 }}
+                className="absolute text-6xl"
+              >
+                🍃
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Flying XP Counter */}
+      <AnimatePresence>
+        {xpGained && (
+          <motion.div
+            initial={{ opacity: 1, y: 0 }}
+            animate={{ opacity: 0, y: -100 }}
+            transition={{ duration: 2 }}
+            className="fixed top-1/3 left-1/2 -translate-x-1/2 text-4xl font-bold text-primary z-50 pointer-events-none"
+          >
+            +{xpGained} XP
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="container mx-auto max-w-3xl py-4 sm:py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-4 sm:mb-6">
           <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-xs sm:text-sm">
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden xs:inline">Back</span>
+            <span className="hidden xs:inline">{t('study.back', 'Back')}</span>
           </Button>
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg font-semibold">
@@ -458,11 +545,17 @@ const Study = () => {
         {/* Progress Bar */}
         <Progress value={progress} className="mb-4 sm:mb-8 h-1.5 sm:h-2" />
 
-        {/* Card */}
-        <Card 
-          className="p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 min-h-[250px] sm:min-h-[300px] flex items-center justify-center cursor-pointer transition-all hover:shadow-medium active:scale-[0.99]"
-          onClick={() => !showAnswer && setShowAnswer(true)}
+        {/* Card with 3D Flip */}
+        <motion.div
+          animate={{ rotateY: showAnswer ? 180 : 0 }}
+          transition={{ duration: 0.6 }}
+          style={{ transformStyle: "preserve-3d" }}
         >
+          <Card 
+            className="p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 min-h-[250px] sm:min-h-[300px] flex items-center justify-center cursor-pointer transition-all hover:shadow-medium active:scale-[0.99]"
+            onClick={() => !showAnswer && setShowAnswer(true)}
+            style={{ backfaceVisibility: "hidden" }}
+          >
           <div className="text-center w-full">
             {currentCard.card_type === "mcq" && !showAnswer ? (
               <div className="space-y-3 sm:space-y-4">
@@ -513,6 +606,23 @@ const Study = () => {
             )}
           </div>
         </Card>
+        </motion.div>
+
+        {/* Explain Button */}
+        {showAnswer && !showExplanation && (
+          <div className="mb-4 text-center">
+            <Button variant="ghost" onClick={handleExplain} disabled={isExplaining}>
+              {isExplaining ? "🔄 Loading..." : t('study.explain', '🤔 Explain')}
+            </Button>
+          </div>
+        )}
+
+        {/* Explanation Display */}
+        {showExplanation && (
+          <Card className="p-4 mb-4 bg-accent/5 border-accent/20 animate-fade-in">
+            <p className="text-sm">{explanation}</p>
+          </Card>
+        )}
 
         {/* Action Buttons */}
         {showAnswer && (

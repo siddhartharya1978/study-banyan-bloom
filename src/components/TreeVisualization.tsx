@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface TreeVisualizationProps {
   level: number;
@@ -7,6 +8,7 @@ interface TreeVisualizationProps {
 
 const TreeVisualization = ({ level, animated = false }: TreeVisualizationProps) => {
   const [visible, setVisible] = useState(!animated);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (animated) {
@@ -91,10 +93,21 @@ const TreeVisualization = ({ level, animated = false }: TreeVisualizationProps) 
         />
       </svg>
 
-      {/* Level badge */}
-      <div className="absolute -bottom-2 bg-gradient-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-semibold shadow-medium">
-        Level {level}
+      {/* Level badge with glow */}
+      <div className="absolute -bottom-2 bg-gradient-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-semibold shadow-glow animate-pulse-glow">
+        {t('dashboard.level', 'Level')} {level}
       </div>
+
+      {/* CSS for leaf sway animation */}
+      <style>{`
+        @keyframes leaf-sway {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(5deg); }
+        }
+        .animate-grow ellipse {
+          animation: leaf-sway 3s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 };
