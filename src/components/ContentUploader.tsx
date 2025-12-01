@@ -7,6 +7,7 @@ import { Upload, Link as LinkIcon, Youtube, Sparkles, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 const ContentUploader = () => {
   const [url, setUrl] = useState("");
@@ -14,6 +15,7 @@ const ContentUploader = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -151,27 +153,27 @@ const ContentUploader = () => {
 
   return (
     <Card className="p-6 sm:p-8 shadow-medium backdrop-blur-sm bg-card/95">
-      <h3 className="text-lg sm:text-xl font-semibold mb-4">Create New Study Deck</h3>
+      <h3 className="text-lg sm:text-xl font-semibold mb-4">{t('dashboard.createNew', 'Create New Study Deck')}</h3>
       <Tabs defaultValue="url" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="url" className="gap-2 text-xs sm:text-sm">
             <LinkIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden xs:inline">URL</span>
+            <span className="hidden xs:inline">{t('dashboard.url', 'URL')}</span>
           </TabsTrigger>
           <TabsTrigger value="youtube" className="gap-2 text-xs sm:text-sm">
             <Youtube className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden xs:inline">YouTube</span>
+            <span className="hidden xs:inline">{t('dashboard.youtube', 'YouTube')}</span>
           </TabsTrigger>
           <TabsTrigger value="pdf" className="gap-2 text-xs sm:text-sm">
             <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden xs:inline">PDF</span>
+            <span className="hidden xs:inline">{t('dashboard.pdf', 'PDF')}</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="url" className="space-y-4">
           <Input
             type="url"
-            placeholder="Paste any URL here..."
+            placeholder={t('dashboard.pasteUrl', 'Paste any URL here...')}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             className="h-11"
@@ -184,12 +186,12 @@ const ContentUploader = () => {
             {isProcessing ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Creating your deck...
+                {t('dashboard.creating', 'Creating your deck...')}
               </>
             ) : (
               <>
                 <Zap className="mr-2 h-4 w-4" />
-                Generate Study Deck
+                {t('dashboard.generate', 'Generate Study Deck')}
               </>
             )}
           </Button>
@@ -198,7 +200,7 @@ const ContentUploader = () => {
         <TabsContent value="youtube" className="space-y-4">
           <Input
             type="url"
-            placeholder="Paste YouTube URL here..."
+            placeholder={t('dashboard.pasteYouTube', 'Paste YouTube URL here...')}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             className="h-11"
@@ -211,12 +213,12 @@ const ContentUploader = () => {
             {isProcessing ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Processing video...
+                {t('dashboard.processingVideo', 'Processing video...')}
               </>
             ) : (
               <>
                 <Youtube className="mr-2 h-4 w-4" />
-                Convert to Deck
+                {t('dashboard.convertToDeck', 'Convert to Deck')}
               </>
             )}
           </Button>
@@ -236,10 +238,10 @@ const ContentUploader = () => {
           >
             <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
             <p className="text-sm sm:text-base text-muted-foreground mb-1">
-              {selectedFile ? selectedFile.name : "Drop your PDF here or click to upload"}
+              {selectedFile ? selectedFile.name : t('dashboard.dropPdf', 'Drop your PDF here or click to upload')}
             </p>
             <p className="text-xs text-muted-foreground">
-              Max file size: 20MB
+              {t('dashboard.maxSize', 'Max file size: 20MB')}
             </p>
           </label>
           <Button 
@@ -250,12 +252,12 @@ const ContentUploader = () => {
             {isProcessing ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Processing PDF...
+                {t('dashboard.processingPdf', 'Processing PDF...')}
               </>
             ) : (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Upload & Generate
+                {t('dashboard.uploadGenerate', 'Upload & Generate')}
               </>
             )}
           </Button>
