@@ -9,7 +9,10 @@ import TreeVisualization from "@/components/TreeVisualization";
 import ContentUploader from "@/components/ContentUploader";
 import LanguageToggle from "@/components/LanguageToggle";
 import BadgeDisplay from "@/components/BadgeDisplay";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useTranslation } from "react-i18next";
+import posthog from "posthog-js";
 import type { Database } from "@/integrations/supabase/types";
 
 type Deck = Database["public"]["Tables"]["decks"]["Row"];
@@ -26,6 +29,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     checkAuth();
@@ -134,6 +138,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
+      <OfflineBanner isOnline={isOnline} />
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
@@ -287,10 +292,13 @@ const Dashboard = () => {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {decks.map((deck) => (
-              <Card
+                <Card
                 key={deck.id}
                 className="p-4 sm:p-6 hover:shadow-medium transition-shadow cursor-pointer active:scale-[0.98]"
-                onClick={() => navigate(`/study/${deck.id}`)}
+                onClick={() => {
+                  posthog.capture('session_started', { deck_id: deck.id, deck_title: deck.title });
+                  navigate(`/study/${deck.id}`);
+                }}
               >
                 <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">{deck.title}</h3>
                 {deck.description && (
