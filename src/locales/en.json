@@ -15,6 +15,7 @@
     "signInSuccess": "Welcome back!",
     "signUpSuccess": "Account created successfully!"
   },
+  "offline": "You're offline. Reviews will sync when you reconnect.",
   "dashboard": {
     "title": "Dashboard",
     "yourTree": "Your Learning Tree",
